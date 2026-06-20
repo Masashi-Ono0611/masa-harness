@@ -1,7 +1,7 @@
 # 変更履歴
 
 このファイルは人間が読む用のリリースノートです。各タグの詳細な差分は
-[GitHub Releases](https://github.com/OWNER/masa-harness/releases) を参照してください。
+[GitHub Releases](https://github.com/Masashi-Ono0611/masa-harness/releases) を参照してください。
 
 形式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/)、
 バージョンは [セマンティックバージョニング](https://semver.org/lang/ja/)（vMAJOR.MINOR.PATCH）に従います。

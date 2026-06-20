@@ -2,23 +2,23 @@
 # masa-harness インストーラ（curl | bash の唯一の入口）
 #
 # 初回も更新も、同じ 1 行でOK:
-#   curl -fsSL https://raw.githubusercontent.com/OWNER/masa-harness/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Masashi-Ono0611/masa-harness/main/install.sh | bash
 #
 # 既存設定がある人が「全部 masashi 版」にしたいとき:
-#   curl -fsSL https://raw.githubusercontent.com/OWNER/masa-harness/main/install.sh | MASA_MODE=overwrite bash
+#   curl -fsSL https://raw.githubusercontent.com/Masashi-Ono0611/masa-harness/main/install.sh | MASA_MODE=overwrite bash
 #
 # このスクリプトは repo を ~/.masa-harness に取得（clone / pull）してから
 # masa-harness-kit/setup.sh を呼ぶだけ。実際の展開ロジック・安全判定は setup.sh 側にある。
 #
 # 環境変数:
 #   MASA_MODE   safe|overwrite … setup.sh にそのまま渡る（既定は自動判定）
-#   MASA_REPO   OWNER/repo      … 取得元（既定 OWNER/masa-harness）
+#   MASA_REPO   Masashi-Ono0611/repo      … 取得元（既定 Masashi-Ono0611/masa-harness）
 #   MASA_BRANCH branch          … 取得ブランチ（既定 main）
 #   MASA_HOME   path            … 取得先（既定 ~/.masa-harness）
 
 set -euo pipefail
 
-REPO_SLUG="${MASA_REPO:-OWNER/masa-harness}"
+REPO_SLUG="${MASA_REPO:-Masashi-Ono0611/masa-harness}"
 REPO_URL="https://github.com/${REPO_SLUG}.git"
 BRANCH="${MASA_BRANCH:-main}"
 DEST="${MASA_HOME:-${HOME}/.masa-harness}"

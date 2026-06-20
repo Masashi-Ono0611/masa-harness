@@ -110,7 +110,7 @@ bash setup.sh
 
 > skill のうち `lesson-harvest` / `claude-stack-*` / `ask-after-grep` は semantic 検索ツール（あれば）を併用する設計です。無くても主経路（grep / Explore agent）で成立します。
 >
-> `docs/design.md` に出てくる「69 skills」等の数値は**作者本番環境の例**で、この kit の同梱物（rules 4 / skills 8 / hooks 3）とは別物です。
+> `docs/design.md` に出てくる「69 skills」等の数値は**作者本番環境の例**で、この kit の同梱物（rules 4 / skills 9 / hooks 3）とは別物です。
 
 ## 学習サイクルが回る仕組み
 
@@ -153,4 +153,4 @@ bash setup.sh
 
 ## 変更履歴
 
-変更履歴は repo ルートの `CHANGELOG.md`（および [GitHub Releases](https://github.com/OWNER/masa-harness/releases)）に一本化しました。現在のバージョンは同梱の `VERSION` を参照してください。
+変更履歴は repo ルートの `CHANGELOG.md`（および [GitHub Releases](https://github.com/Masashi-Ono0611/masa-harness/releases)）に一本化しました。現在のバージョンは同梱の `VERSION` を参照してください。
