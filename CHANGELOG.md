@@ -8,6 +8,19 @@
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-06-20
+
+Opus 4.8 の「ツール呼び出しが素テキストとして漏れる」既知バグへの保護を一式追加したリリース。
+
+### 追加
+- **Stop hook `tool-leak-guard.py`** … アシスタントの最終メッセージに `<invoke>` / `<parameter>` 等の tool-call markup が**実行されずテキストとして残った**（＝リーク）ことを検出し、その場で1回だけ正しい tool call として出し直させる安全網。`stop_hook_active` で無限ループを防止し、コードフェンス内の引用・解説は誤検知しない。同梱 hook は 3 → 4 個に。
+- **CLAUDE.md skeleton に reflex 2 件**:
+  - ツール呼び出しを素テキストで吐かない（tool call を返信の先頭に置く・1メッセージ1コール・前置き prose を避ける）。上記 hook と対の振る舞い側の対策。
+  - `governance-gate.py` は「コマンド文字列を literal grep」で BLOCK 判定するため、commit message / PR body / 説明文に危険語を書くと無関係な `git` / `gh` まで巻き添えになる。誤検知で止まったら言い換えて即リトライ。
+
+### 変更
+- `settings.json.template` の `hooks` に `Stop`（`tool-leak-guard.py`）配線を追加。
+
 ## [1.2.0] - 2026-06-20
 
 tar.gz 手渡し配布から、**GitHub Release + 1行インストール**へ移行したリリース。

@@ -1,6 +1,6 @@
-CLAUDE.md.template	~/.claude/CLAUDE.md	generalized	afd3ea4ef27234ba4242cea136923f8679e720b7932130a0b229d54eb4b47f95
-settings.json.template	~/.claude/settings.json	generalized	4d77d9f0eb78f76e7d1e2ac3f4a23e01bf426a7458701a23d032bef0300014d4
-state/recurring-tasks.json.template	~/.claude/state/recurring-tasks.json	generalized	f66e62b9fa2793730db78e7e50ae57483fc951c2407c76b0046cae151eabec57
+CLAUDE.md.template	~/.claude/CLAUDE.md	generalized	4dcbc098b97f4e090044d4a7ec99cd672d27ef08e550ef80505c840adb848135
+settings.json.template	~/.claude/settings.json	generalized	c7374472376f673f9a60c0eb1065362fc7cf9103ecc49b566199dfe67a6026ac
+state/recurring-tasks.json.template	~/.claude/state/recurring-tasks.json	generalized	203c494e9ec0bb754db754b9a609d4624d3f1e20911cae49b80a026894803b0b
 rules/typescript.md	~/.claude/rules/typescript.md	verbatim	0498cd786a7e7c035a4776f3dd93be3ed04e7de5d4493c94afc8209c69dbc566
 rules/skill-template.md	~/.claude/rules/skill-template.md	generalized	0d71e215cdb3b5298df196af1293c3b3f06406cc292fdfc27f916f8615d3474c
 rules/agent-model-routing.md	~/.claude/rules/agent-model-routing.md	generalized	e796a369a230ed9d420850fd9e175e4c07457b211e5a5bec32f31e831d1e6f5d
@@ -8,6 +8,7 @@ rules/config-hygiene.md	~/.claude/rules/config-hygiene.md	generalized	d2b0d5cb40
 hooks/governance-gate.py	~/.claude/hooks/governance-gate.py	generalized	1efe7c2d80391e4e40d6364619cecd8e8e1c9b8856257f8b8acd5cda6b10ee72
 hooks/audit-reminder.sh	~/.claude/hooks/audit-reminder.sh	generalized	28b3ba748aebcb7706ecaa8f8f11d6309e157e3126ba38e505033266b1131d43
 hooks/post-edit-format.sh	~/.claude/hooks/post-edit-format.sh	generalized	54e86adc3e2c69d2132dcb38f21b24b3311f5c8af379e05f6b3ce8dedb3dfb83
+hooks/tool-leak-guard.py	~/.claude/hooks/tool-leak-guard.py	verbatim	83b70fe43bae1996fbabb0a9a88e3d2f08204de26c2f4831fdf753e2883d6a96
 skills/ask-after-grep/SKILL.md	~/Developer/.claude/skills/ask-after-grep/SKILL.md	generalized	c11ec255b5233501e9303e615ef35e39b514137a197568ac336db3fa885c6c75
 skills/lesson-harvest/SKILL.md	~/Developer/.claude/skills/lesson-harvest/SKILL.md	generalized	da7d1c85711fc3590b4bf6a396cb5650e9e4e2c11533bd022e816a7e93101a36
 skills/oss-clone-security/SKILL.md	~/Developer/.claude/skills/oss-clone-security/SKILL.md	generalized	ab84eb97e66e26fb027562137b6e24957f8965c5e524dde2926714fa51d93e61

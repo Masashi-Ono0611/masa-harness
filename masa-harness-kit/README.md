@@ -40,7 +40,8 @@ masa-harness-kit/
 ├── hooks/
 │   ├── governance-gate.py         # PreToolUse ガバナンス gate（BLOCK/LOG/ALLOW）
 │   ├── audit-reminder.sh          # SessionStart: 定期タスクの due 通知（BSD/GNU date 両対応）
-│   └── post-edit-format.sh        # PostToolUse: 拡張子ごとに整形（ruff/prettier/gofmt 等・無ければ no-op）
+│   ├── post-edit-format.sh        # PostToolUse: 拡張子ごとに整形（ruff/prettier/gofmt 等・無ければ no-op）
+│   └── tool-leak-guard.py         # Stop: 漏れた tool-call markup を検出し1回だけ出し直させる（Opus 4.8 既知バグ対策）
 ├── rules/
 │   ├── typescript.md              # 言語別（python/solidity 等は各自追加）
 │   ├── skill-template.md          # skill の書き方テンプレ
@@ -103,14 +104,14 @@ bash setup.sh
 | 含む | 含まない（各自で） |
 |---|---|
 | 設計思想・Karpathy 4 原則・CLAUDE.md 骨格 | 作者の org / プロジェクト構成・社名・メール |
-| hook 3 個（governance-gate / audit-reminder / format） | 音声 UI（VOICEVOX 等の通知 hook） |
+| hook 4 個（governance-gate / audit-reminder / format / tool-leak-guard） | 音声 UI（VOICEVOX 等の通知 hook） |
 | 汎用 rule 4 個（typescript・skill-template・config-hygiene・agent-model-routing） | 外部接続（second brain / メッシュ VPN / 各種 MCP の実接続・トークン） |
 | harness 改善系の汎用 skill 9 個 | 個人ドメイン skill・過去の作業データ・auto-memory の中身 |
 | 定期タスクの仕組み＋自己改善ループ3件 | 作者の定期タスク本体 |
 
 > skill のうち `lesson-harvest` / `claude-stack-*` / `ask-after-grep` は semantic 検索ツール（あれば）を併用する設計です。無くても主経路（grep / Explore agent）で成立します。
 >
-> `docs/design.md` に出てくる「69 skills」等の数値は**作者本番環境の例**で、この kit の同梱物（rules 4 / skills 9 / hooks 3）とは別物です。
+> `docs/design.md` に出てくる「69 skills」等の数値は**作者本番環境の例**で、この kit の同梱物（rules 4 / skills 9 / hooks 4）とは別物です。
 
 ## 学習サイクルが回る仕組み
 
@@ -149,7 +150,7 @@ bash setup.sh
 ## アンインストール
 
 - **元に戻す**: 上書きを伴う配置（`overwrite`）は既存を `~/.claude/<file>.bak-<日時>` に退避しています。退避ファイルを戻せば原状復帰します（例: `mv ~/.claude/CLAUDE.md.bak-20260619-120000 ~/.claude/CLAUDE.md`）。
-- **kit 由来物だけ消す**: このキットが設置したファイルは `~/.claude/.masa-harness/manifest.txt` に一覧があります。それを見て該当ファイル（hooks 3 / rules 4 / skills 9 / `state/recurring-tasks.json`）を削除し、`settings.json` の hooks セクションを外してください（または各 `.bak` から復元）。
+- **kit 由来物だけ消す**: このキットが設置したファイルは `~/.claude/.masa-harness/manifest.txt` に一覧があります。それを見て該当ファイル（hooks 4 / rules 4 / skills 9 / `state/recurring-tasks.json`）を削除し、`settings.json` の hooks セクションを外してください（または各 `.bak` から復元）。
 
 ## 変更履歴
 
