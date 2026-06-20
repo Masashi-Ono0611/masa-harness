@@ -1,0 +1,87 @@
+<!--
+  これは「masa-harness」を一般化した CLAUDE.md の骨格テンプレートです。
+  配置先: ~/.claude/CLAUDE.md（user-global）。setup.sh または手動で .template を外す。
+  {{...}} のプレースホルダを自分の環境に置き換え、不要な節は削ってください。
+  思想: Thin Harness, Fat Skills — グローバル指示は「pointer（本体の在処）＋ 必ず効く reflex」だけに
+  保ち、ドメイン手順は on-demand な skill / doc に置く。知能=SKILL / 実行=HOOK / 記憶=MEMORY の3分業。
+  この HTML コメントは配置前に消してもよい（残しても Claude は無視する）。
+-->
+
+# Claude Code Harness（個人運用ルール）
+
+## プロジェクト構成
+- {{ORG_OR_PROJECT_1}} - {{用途・アカウント・接続している外部サービスなど}}
+- {{ORG_OR_PROJECT_2}} - {{...}}
+- （自分の org / プロジェクトをここに列挙。社名・メール・スタックは各自記入）
+
+## 共通ルール
+- {{応答言語}}で応答する（例: 日本語）。コミットメッセージは英語（好みで）
+- **直プッシュ禁止・PR 必須**: default ブランチ（main/master）への直接コミット／push をしない。変更は必ず feature ブランチを切る → push → PR → merge。「過去がそうだった」「ローカルだけ」を直 push の理由にしない。着手時点から守る（後から feature ブランチへ移し替える二度手間を避ける）
+- **テスト実行してから完了報告**
+- **不確実なものを確実そうに出さない（最重要 integrity）**: (1) 実行していない／garbled な出力を「実測」として提示しない＝取れなければ「取れなかった」と言う。(2) 実際に exercise していないものを「検証済み／Done」にしない＝端折ったら「ここは未検証」と自分から申告する。(3) 長セッションの圧力は rigor・正直さを下げる理由にならない＝検証できないなら checkpoint する。(4) 失敗を外部のせいにする前に、自分の invocation（quoting / shell / 構文）を疑う
+- **同じ指摘を2回受けたら、該当ルールを CLAUDE.md / rules に追記して再発防止する**
+- **Thin Harness, Fat Skills**: ドメイン手順／詳細を CLAUDE.md にインラインせず skill / doc に置き、CLAUDE.md は **pointer ＋ 必ず効く reflex のみ**に保つ。新規節を足す前に「on-demand skill / doc で良くないか?」を self-check
+- **変更が「概念」を陳腐化させたら blast-radius を sweep する**: フラグ名・呼び名・デフォルト値を変えたら、**旧概念名で docs / skills / rules を grep** し、ヒットした stale を放置しない（「触る範囲は最小」と「変更の波及は漏らさず追う」を両立）
+- **任意コード実行を伴うツール導入**（`npm i -g` / `pipx` / `gem install` / `cargo install` / `go install` ＝ install/build 時に postinstall・build.rs・setup.py が走る枠）は勝手に実行せず先に確認する。`brew install` は許可（curated・可逆・低リスク）。執行は `governance-gate.py`
+- **後から決まったことは「継ぎ足し」で済ませず、文書全体になじませて直す**: 注記ボックス・末尾追記・「NEW」「後から変更」等の作業履歴マーカーを本文に残さない。(1) stale を本文ごと書き換える (2) 追加分は本文の該当箇所に溶かす (3) 番号・前後の流れ・整合を取り直す。経緯は commit / PR / issue 側に置く
+- **読者目線で自己完結させる**: 渡す相手がその文書だけで理解できることを基準に。略称は初出で開く／「案B」「指摘②」のような会話依存の参照や独自通し番号で本文を指さない（指すなら見出し名／内容そのもので）
+- **シェルが zsh の場合の word-split reflex**: zsh は unquoted `$VAR` を word-split しない。`LIST="a b c"; for x in $LIST` は1回ループになる。リスト反復はリテラルトークン `for x in a b c` か配列を使う。ループが「1回だけ全文字列で失敗」したらまず word-split を疑う
+- 既存の仕組み・慣習的デフォルトで判断できる場面は質問を多用せず、自分で調べて「これで進める」と提案する（質問は "答えで作業が変わる分岐" に限定）
+
+## 外部リポ取り扱い
+- 新規 `git clone` / `fork` / 未知 OSS の試用 / untrusted な `git pull` 時は `oss-clone-security` skill を必ず先に発動
+- スキャン完了前に `npm install` / `pip install` / `docker build` / `make` / `bash *.sh` を実行しない
+- **適用除外**: 自分が author/maintainer の personal repo / 自組織管理 repo（`{{your-org}}/*` 配下で過去利用実績あり）/ 公式 SDK の README 通りインストール
+- 判断に迷ったら適用する（typo-squat / namespace 詐称対策）
+
+## 言語別コーディングルール
+（同梱は typescript のみ。使う言語の rule を `~/.claude/rules/` に置いて import する）
+@~/.claude/rules/typescript.md
+
+## コーディング規律（Karpathy 4原則・全言語横断）
+1. **Think Before Coding** — 前提は明示し、不明点は黙って選ばず止めて質問。複数解釈があれば提示。実装前に docs / CLAUDE.md / AGENTS.md を grep してから訊く（`ask-after-grep` reflex）
+2. **Simplicity First** — 依頼を解く最小コードのみ。投機的な機能・単一用途の抽象化・未依頼の「柔軟性」・起こり得ないケースのエラー処理は書かない。「シニアが過剰複雑と言うか?」を自問
+3. **Surgical Changes** — 触るのは必要箇所のみ。隣接コード／整形を勝手に改善しない、壊れていないものをリファクタしない、既存 style に合わせる。変更した全行が依頼に直接トレースできること。**AI-KEEPOUT マーカー範囲（行頭コメント）は読むだけ＝編集禁止**（変更提案は diff で提示し人間が反映）
+4. **Goal-Driven Execution** — タスクを検証可能な成功基準に変換（「修正」→「再現テストを書いて pass させる」）。テストを実行してから完了報告する
+
+## Skill 新規生成ルール
+- 新規 skill 生成 / 既存 skill 大幅改修時は `@~/.claude/rules/skill-template.md` に準拠する
+- skill の起動は `/<skill ディレクトリ名>`（例 `/lesson-harvest`）。`disable-model-invocation: true` の skill も手動 `/<name>` 起動は有効
+
+## Agent モデルルート
+@~/.claude/rules/agent-model-routing.md
+
+## Config Hygiene（環境保守の owner マップ）
+@~/.claude/rules/config-hygiene.md
+
+## 繰り返しタスク管理（単一レジストリ）
+- **SoT**: `~/.claude/state/recurring-tasks.json` — 時間ベースの定期タスクを集約
+- SessionStart hook（`audit-reminder.sh`）が due/overdue を通知。タスク追加は entry を1行足すだけ、完了したら `last_run` を更新
+
+## 並列開発
+- 同一リポで2件以上の並行作業は `git worktree add` で物理分離（branch 切替で未コミット変更が混線するのを防ぐ）
+- 異なるリポ間の並行は worktree 不要（ディレクトリ分離済み）
+
+## 3層運用（IC / DRI / AI Founder）
+- **IC（実行）**: Agent に任せる実装・調査・コマンド。subagent fan-out と deterministic tool で量をこなす
+- **DRI（検証）**: 本人が結果を検証する。**責任領域（法務・契約・署名・本番デプロイ承認・対外発信）は AI に最終判断させない**
+- **AI Founder（発想・前提破壊）**: 「今の X、前提から疑う余地は?」を問い直し、資産になる構築物を設計する
+
+## メモリ3層モデル
+保存前に「**2 プロジェクト以上で要る? → L1 ／ 単一プロジェクト → L2 ／ 想起だけ → 放置**」を判定する。
+- **L1 規約**: CLAUDE.md 階層（決定論・毎セッション読まれ確実に発火。2 プロジェクト以上に効く反射ルール / rule）
+- **L2 文脈**: auto-memory（プロジェクト固有。`~/.claude/projects/<project>/memory/` の MEMORY.md が index。type = user / feedback / project / reference）
+- **L3 (任意)**: semantic 検索ツール（あれば。想起補助でよいものを流す）
+
+## 自己改善ループ（学習サイクル）
+- 週次 `lesson-harvest` が直近の会話履歴（transcript）を振り返り、2 回以上の指摘・訂正を L1（CLAUDE.md / rules）/ L2（memory）へ昇格させる ＝「同じ指摘を2回受けたら追記」の自動執行。
+- **記憶を自動で蓄積・連想する外部の仕組み（L3）が無くても輪は閉じる**: その場合はこの週次の明示的な振り返りが「気づき → ルール化」の主経路になる。
+- `recurring-tasks.json` に lesson-harvest（週次）/ config-audit（剪定・週次）/ skill-audit（隔週）が登録済みで、SessionStart hook が due を通知する。配置直後から学習サイクルが立ち上がる。
+
+## ガバナンス（ローカル deterministic hook）
+- `~/.claude/hooks/governance-gate.py`（PreToolUse hook）が durable-state risk を **BLOCK / LOG / ALLOW** の3挙動で執行する。
+  - **BLOCK**: 破壊（`rm -rf` の危険 target）/ global pkg install / Claude 動作環境の改変（settings.json）/ secrets（.env）/ 権限境界（branch protection・IAM・release・publish）
+  - **LOG**: 可逆だが team 可視な mutation を記録して通す
+  - **ALLOW**: それ以外は素通し（日常操作の摩擦をゼロに）
+- 保護対象 branch / 本番 workflow は env `GATE_PROTECTED_BRANCHES` / `GATE_PROD_WORKFLOWS` で各自設定（既定は一般的な命名）
+- override は本人の手動実行のみ

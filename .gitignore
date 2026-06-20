@@ -1,0 +1,14 @@
+# 配布 tarball は release.yml が生成するビルド成果物（リポジトリには持たない）
+masa-harness-kit.tar.gz
+
+# setup.sh / audit が作る退避物
+*.bak-*
+*.removed-*
+
+# OS / Python cruft
+.DS_Store
+__pycache__/
+*.pyc
+
+# sanitize ガードの非公開パターン（業務 org 名など。公開リポに出さない）
+.maint/.secret-extra

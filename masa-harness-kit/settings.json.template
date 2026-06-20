@@ -1,0 +1,91 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(echo:*)",
+      "Bash(du:*)",
+      "Bash(kill:*)",
+      "Bash(mktemp:*)",
+      "Bash(xargs:*)",
+      "Bash(curl:*)",
+      "Bash(git:*)",
+      "Bash(gh issue:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh run:*)",
+      "Bash(gh api:*)",
+      "Bash(gh label list:*)",
+      "Bash(gh project item-list:*)",
+      "Bash(python3:*)",
+      "Bash(node -e:*)",
+      "Bash(npm install:*)",
+      "Bash(pnpm:*)",
+      "Bash(go build:*)",
+      "Bash(go test:*)",
+      "Bash(docker:*)",
+      "Bash(docker compose ps:*)",
+      "Bash(docker compose logs:*)",
+      "Bash(lsof:*)",
+      "Bash(brew install:*)",
+      "Bash(brew uninstall:*)",
+      "WebSearch"
+    ],
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.local)",
+      "Read(**/.env.*.local)",
+      "Read(**/.env.development)",
+      "Read(**/.env.production)",
+      "Read(**/.env.staging)",
+      "Read(**/.env.test)",
+      "Read(**/secrets/**)",
+      "Read(**/credentials*)",
+      "Read(**/*.pem)",
+      "Read(**/id_rsa*)"
+    ],
+    "ask": [
+      "Agent(model:opus)"
+    ],
+    "defaultMode": "auto"
+  },
+  "fallbackModel": [
+    "claude-sonnet-4-6"
+  ],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "$HOME/.claude/hooks/post-edit-format.sh", "timeout": 10 }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "$HOME/.claude/hooks/audit-reminder.sh", "timeout": 5 }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "$HOME/.claude/hooks/governance-gate.py", "timeout": 5 }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "$HOME/.claude/hooks/governance-gate.py", "timeout": 5 }
+        ]
+      }
+    ]
+  },
+  "language": "Japanese",
+  "theme": "dark",
+  "autoUpdatesChannel": "latest"
+}

@@ -1,0 +1,56 @@
+name: release
+
+# タグ vX.Y.Z を push すると、配布物を検証してビルドし、GitHub Release を自動発行する。
+#   git tag v1.2.0 && git push origin v1.2.0
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # gh release create に必要
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 配布物に個人情報（パス/メール/業務 org 名）が混入していないか。混入していれば release を止める。
+      - name: Sanitize guard
+        run: bash .maint/kit-sync.sh sanitize
+
+      # タグ（vX.Y.Z）と VERSION ファイルの一致を強制（版ズレ防止）
+      - name: Verify tag matches VERSION
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          ver="$(cat masa-harness-kit/VERSION)"
+          if [ "$tag" != "$ver" ]; then
+            echo "::error::tag ($tag) と masa-harness-kit/VERSION ($ver) が一致しません"
+            exit 1
+          fi
+
+      # setup.sh / install.sh の bash 構文チェック
+      - name: Lint shell
+        run: |
+          bash -n install.sh
+          bash -n masa-harness-kit/setup.sh
+          bash -n .maint/kit-sync.sh
+
+      # 配布 tarball を作成（backup/キャッシュは除外）
+      - name: Build tarball
+        run: |
+          tar --exclude='*.bak-*' --exclude='*.removed-*' \
+              --exclude='.DS_Store' --exclude='__pycache__' \
+              -czf masa-harness-kit.tar.gz masa-harness-kit
+
+      # Release 発行（first-party な gh CLI を使用＝third-party action を増やさない）
+      # --generate-notes でコミット/PR からリリースノートを自動生成
+      - name: Create Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            masa-harness-kit.tar.gz \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes

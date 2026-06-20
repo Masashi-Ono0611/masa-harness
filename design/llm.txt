@@ -1,0 +1,214 @@
+# masa-harness
+
+> 複数の業務 org と個人プロジェクトをまたぐ、個人専用の Claude Code ハーネス（operating system）。中核の信条は「Thin Harness, Fat Skills」——エージェントには賢く考えさせ、ハーネスは薄く保ち、危険操作の執行は確率でなく決定論的な hook で行う。知能（skill）・実行（hook）・記憶（memory）を別レイヤに分離している。本ファイルは index.html の全文ソース（人間向けランディングは図中心、本ファイルは LLM / 詳細読者向け）。
+
+環境: Opus 4.8 (1M context) / MacBook ＋ Mac Mini 64GB (headless) / 6 hooks / 69 skills / 8 rules / 3層 memory / Tailscale mesh。
+注記: 業務 org・プロジェクトの固有名はすべて伏せ、構成と思想のみ記載。数値は 2026-06-19 時点。
+
+---
+
+## 01. 設計哲学 — 賢さは skill へ、執行は deterministic tool へ
+
+中核の信条は **Thin Harness, Fat Skills**（Garry Tan）。グローバル指示（CLAUDE.md）に手順を直書きすると肥大し、かえって効かなくなる。そこで:
+
+- **CLAUDE.md は「pointer（本体がどこにあるか）＋ 必ず効く reflex（短い反射ルール）」だけに保つ**（user-global は 143 行）。ドメイン手順・判断ロジックは on-demand な skill / doc に置く。
+- 新しい節を足す前に必ず「これは on-demand skill / doc で良くないか？」を self-check する。
+- 三分業: **知能 → SKILL** / **実行 → HOOK（deterministic tool）** / **記憶 → MEMORY**。
+
+### Karpathy 4原則（全言語横断・既存運用に統合）
+
+LLM coding の典型的な落とし穴を、お願いベースのルールでなく仕組みで潰す。
+
+1. **Think Before Coding** — 前提は明示し、不明点は黙って選ばず止めて質問。複数解釈があれば提示する。実装前に docs / CLAUDE.md / AGENTS.md を grep してから訊く（`ask-after-grep` reflex。ドキュメントに書いてあることを AI に再質問する performative AI を防ぐ）。担保: plan-mode / AskUserQuestion。
+2. **Simplicity First** — 依頼を解く最小コードのみ。投機的な機能・単一用途の抽象化・未依頼の「柔軟性 / 設定可能性」・起こり得ないケースのエラー処理は書かない。「シニアが過剰複雑と言うか？」を自問。
+3. **Surgical Changes** — 触るのは必要箇所のみ。隣接コード / コメント / 整形を勝手に改善しない、壊れていないものをリファクタしない、自分と違う流儀でも既存 style に合わせる。変更した全行が依頼に直接トレースできること。ただし変更が「概念」を陳腐化させたら、旧概念名（フラグ名・呼び名・デフォルト値など）で docs / skills / rules / memory を grep し、波及（blast-radius）は漏らさず追う。「触る範囲は最小」と「変更の波及は漏らさず追う」を両立させる。AI-KEEPOUT マーカー範囲は読むだけ＝編集禁止（人間専用領域）。
+4. **Goal-Driven Execution** — タスクを検証可能な成功基準に変換（「修正」→「再現テストを書いて pass させる」）。テストを実行してから完了報告する。担保: `/loop` / investigate skill。
+
+---
+
+## 02. 全体構成 — 5 レイヤで分業
+
+入力（ユーザー依頼 / セッション）は必ず hook 層を通過してから実行される。各層は **config-hygiene の owner マップ**で「足す係 / 削る係 / 監査する係」が単一に決まっており、監査の重複（nag）も抜け（GAP）も起きないよう MECE に切ってある。
+
+| 層 | owner | する事 | しない事 |
+|---|---|---|---|
+| ① settings.json / hooks / 構造 | claude-config-audit | 公式ベスプラとの構造ギャップ・hook 健全性・permission 棚卸し | skill 中身・memory |
+| ① rules / CLAUDE.md 本文の剪定（削る側） | claude-config-audit | 重複・stale・肥大（5個でなく40個化）・規則衝突の剪定 | 規則の追加 |
+| ② 規則の追加（足す側） | lesson-harvest | 繰り返し指摘 → CLAUDE.md / rules への追記起案 | 剪定 |
+| ③ skills / commands | claude-skill-audit | template 準拠・registry の DRY/MECE・sprawl 閾値（8–12個）・未使用 disable・`/doctor` budget | settings 構造・memory |
+| ④ memory（L1 昇格 routing + L2 dedup） | memory-cleanup | cross-project 重複・L1 昇格候補・stale path・gbrain hygiene 連携 | skill / settings 構造 |
+| ⑤ state | recurring-tasks.json | 時間ベース定期タスクを単一レジストリに集約 | — |
+| 横断オーケストレーション | claude-stack-audit | 上記 sub-audit の統括ラン（重い・月次想定） | 個別レーンの実装 |
+
+best practice: グローバル規則は CLAUDE.md（lean・常時）／ドメイン手順は skill。skill sprawl は 8–12 個が分水嶺で、超過分は「context tax」（使わなくても払うトークン）。「lint であって nag でない」——監査本数自体を増やさない。
+
+---
+
+## 03. ガバナンス — ローカル deterministic hook
+
+「責任領域（governance / IAM / branch protection / release / 法務・契約・署名・本番デプロイ承認・対外発信）は AI に最終判断させない」を、お願いベースでなく **PreToolUse hook（`governance-gate.py`・632 行）** で執行する。Bash / Edit / Write / MultiEdit のコマンド文字列を解析し、durable-state リスクを3挙動に振り分ける。
+
+### 3分岐
+
+- **BLOCK（exit 2）**: 破壊（`rm -rf` の危険 target）/ global pkg install（`npm i -g` / `pipx` / `gem install` / `cargo install` / `go install` ＝ install/build 時に postinstall・build.rs・setup.py が走る枠）/ Claude 動作環境の改変（settings.json / CLAUDE.md / recurring-tasks.json / gstack skill）/ secrets（.env）/ vendor 操作。stderr に理由を返してモデルに再考させる。
+- **LOG（exit 0 ＋ ops ログ追記）**: 可逆だが team 可視な governance mutation を記録して通す。
+- **ALLOW（exit 0）**: それ以外は素通し。日常操作の摩擦をゼロに保つ。
+
+### allowlist / 例外
+
+- `rm -rf` は target が全て再生成可能な ephemeral dir（node_modules / dist / build / .next / .turbo など）なら BLOCK を見送る。$HOME / tmp 以外の絶対パス・`..`・変数展開・glob は従来通りブロック。
+- `brew install` は curated・可逆・低リスクで日常頻度が高いため除外（ハードブロックは摩擦のみ）。見慣れない third-party tap だけ一拍置く。`brew upgrade` は system-wide な挙動変化のため別途確認。
+- override は本人の手動実行のみ（hook の PreToolUse を一時 off）。
+
+### 他の hook
+
+| hook | スクリプト | 役割 |
+|---|---|---|
+| SessionStart | audit-reminder.sh | recurring-tasks.json を読み、due/overdue を context に注入。warn 窓は interval/4 日前（1〜14 日 clamp）。 |
+| PostToolUse (Edit/Write) | post-edit-format.sh | 編集のたび自動フォーマット。整形は人でなく hook の仕事に寄せる。 |
+| UserPromptSubmit / Stop / PostToolUseFailure | zundamon-speak.sh ほか | 開始・完了・失敗を音声で通知（VOICEVOX）。 |
+
+### 誤検知への自衛（reflex 化）
+
+gate は「コマンド文字列を literal grep」で執行するため、説明文・grep パターン・commit message に危険語の bigram（`npm publish` / `npm i -g` / `install -g` など）を混ぜると、無関係な `git` / `gh run` / `grep` まで巻き添えでブロックされる。だから:
+- 危険語の bigram を実行コマンド以外でも避ける（言い換える）。
+- 誤検知で止まったら、ユーザーに手動実行を促す前にまず言い換えて即リトライする（真に危険な実操作は別途ガード済みなので、言い換えで通るものは false positive）。
+
+---
+
+## 04. 記憶 — 3層モデル（L1 / L2 / L3）
+
+「どこに覚えさせるか」を即判定する routing を持つ。新しい知見を保存する前に「**2 project 以上で要るか？ → L1／単一 PJ → L2／想起だけ → 放置（脳が自動 ingest）**」を通す。これで cross-project に効く規約が単一 PJ に埋もれない。さらに上位の分岐として「チーム / 組織の他メンバーも同じ罠を踏むか？ → Yes なら個人 memory でなく team-shared な repo（rules / docs）に PR で残す／No（自分の作業文脈・好み・環境固有）なら個人 memory」を先に通す。
+
+| 層 | 実体 | 性質 | 入れるもの |
+|---|---|---|---|
+| L1 規約 | CLAUDE.md 階層 | 決定論。毎セッション読まれ確実に発火 | 2 PJ 以上に効く reflex / rule |
+| L2 文脈 | auto-memory（本 PJ 27 file・MEMORY.md が index） | PJ 固有。type = user / feedback / project / reference | 単一 PJ の作業文脈・好み・環境固有 |
+| L3 脳 | gbrain（Mac Mini local second brain） | semantic。全 org 会話を毎晩 ingest し自己増殖 | 想起補助でよいもの（自動で流入） |
+
+### 検索の使い分け
+
+- **grep**: 正規表現 / 完全一致 / glob。既知のファイル・シンボルはそのまま grep（確定検索を L3 に投げない）。
+- **gbrain query（~3秒）**: vector + keyword hybrid。semantic な「どこで X を扱ってる？」「過去に何を決めた？」の主軸。
+- **gbrain think（~57秒）**: 脳全体を LLM 推論し、引用付きで「なぜそう決めたか」「決定の経緯」をまとめ直す。
+- **nightly dream**: 毎晩 ingest 末尾で synthesize ＋ pattern 抽出、graph link を自己増殖。放っておくほど賢くなる。
+
+外部 memory OSS（mem0 / Zep / Letta / Cognee）は**不採用**。gbrain と機能が重複し、運用が2系統になる負債のため。記憶系は1本に絞る。横断 dedup・L1 昇格・gbrain hygiene は週次 `memory-cleanup` skill が担う。
+
+---
+
+## 05. Skills — registry ＋ self-improving 監査
+
+69 個の skill を、命名規則とテンプレ準拠で監査し続ける。
+
+### 命名規則 `<namespace>-<object>-<action>`
+
+名前だけで責務境界が読めること＝誤発火を防ぐことが目的。
+- namespace 接頭辞（meta-skill のみ・一貫させる）: `claude-`（Claude Code 環境自体の保守・監査）/ `dev-`（マシン・開発環境 ops）/ 無印（ドメイン固有・reflex）。
+- action = 統制語彙（同じ動作は同じ語）: `audit`（基準と差分照合してレポート）/ `check`（pass/fail gate）/ `news`（digest）など。audit と check を混用しない。
+
+### テンプレ準拠
+
+新規生成 / 大幅改修は固定テンプレに従う: 冒頭に Step 一覧表 / Constants 集約（散在する固定値を1箇所に）/ 責務範囲表（関連 skill との被り排除）/ Constraints は Errors + Warnings の 2-table / Evidence Index（context 付き）。対話式コマンド禁止・undefined 変数禁止・副作用前 guard 必須（Codex マルチモデルレビュー由来の Critical）。500 行 soft cap。
+
+### owner 分業（足す / 削る / 守る）
+
+- **足す係 — lesson-harvest**: transcript を sensor に「繰り返し指摘」を収穫 → CLAUDE.md / rules への追記 diff を起案 → 承認後反映する self-improving loop。「同じ指摘を2回受けたら再発防止ルール化」の自動執行版。
+- **削る係 — claude-config-audit / claude-skill-audit**: 重複・stale・肥大・規則衝突を剪定。「lint であって nag でない」。
+- **守る係 — oss-clone-security**: 外部リポ取り込みの瞬間に gitleaks → trivy → ripgrep IOC → manual review を強制。スキャン完了前の `npm install` / `pip install` / `docker build` / `make` / `bash *.sh` を一切禁止。
+
+### eval-first
+
+infra やチェックを作る・直すたびに executable な eval を `run-evals.py`（guard / benchmark / config の smoke）に追加する。「会話で再発見する」のを止めて機構に焼き付ける。既存監視のあるものは二重に作らない。
+
+---
+
+## 06. 定期タスク — 単一レジストリ
+
+`recurring-tasks.json` が time-based タスクの single source of truth（20 task / 17 有効）。SessionStart hook（audit-reminder.sh）がここを読み、due/overdue を毎セッション通知する。追加は entry を1行足すだけ、完了したら `last_run` を更新すれば nag が止む。
+
+| cadence | 内容 |
+|---|---|
+| 週次（7d） | config / skill / memory の hygiene 監査・news digest・lesson-harvest・model 配分コストガード・builder-benchmark（incident 集計 + dashboard 再生成）・org rollup。安いものは週次のまま据え置く。 |
+| 日次（1d） | 脳の前夜レポート（前日 ingest log ＋ API 使用量を朝に集約）・外部ブロッカーの経過日更新（6–10日=ping / 11–20日=escalate / 20日超=plan B）。 |
+| 月次（30d） | 試験運用中の項目（再評価期限付き）の prune・archive の圧縮判断・builder-benchmark の外部 calibration。 |
+| disabled | 卒業・廃止した task（計測アンケート系など）も消さず disabled で残す。なぜ止めたかの判断ログを保持。 |
+
+cron や Cloud Routine でなく **SessionStart hook 方式**を選択（常駐デーモンを増やさず「セッションを開いたら due が見える」だけの軽い仕組みで足りる）。1分で終わるルーチンは skill 化せず、JSON entry ＋ 既存 doc で運用する。
+
+---
+
+## 07. モデルルート — 実測 frontier
+
+subagent 呼び出しのたびに、タスク特性とトークン残量から model を自動選択する。**デフォルトは Sonnet**。Opus は「Sonnet では明らかに不十分」なときだけ。月次トークン予算は **hard constraint**（超過＝その月の作業停止＝∞ の時間損）として扱う。`仕事時間 = 推論時間 + 巻き戻し時間 + 統合時間 + リミット超過停止時間`。
+
+| agent | 既定 model | Opus に上げる条件 |
+|---|---|---|
+| Explore | Haiku | ファイル名検索 / grep / 浅い読み込み。深く読む段で Sonnet。実測で grade 1.0 を Sonnet 比 1/3 コスト＝frontier 上 |
+| general-purpose | Sonnet | cross-module 整合性・セキュリティ判断が入れば Opus |
+| Plan | Sonnet | >10 file / 新規アーキ / セキュリティ / 前例なき tradeoff のみ |
+| code-reviewer | Sonnet | governance / incident 直結のみ |
+
+### 実測で確定した reflex
+
+- **上位 tier に上げる前に、まず effort を疑う**: plan-tier で adaptive thinking が grade 不変のまま 14〜20× コストになった実測あり。主コスト要因が tier でなく effort/thinking のことがある → 上位 tier に上げる前に effort↓ で足りるか先に見る。
+- **Opus は測った全 archetype で品質ゲインゼロ** → 「Opus は Sonnet が明らかに不十分な時のみ」を実測が支持。
+- **資産形成への投資枠**: ルーチン実行（既知パターンの繰り返し）は Sonnet で温存してクオータを守り、浮いた分を「一度作れば繰り返し効く構築物」（self-improving loop / 運用基盤 / skill 設計 ＝ AI Founder 業務）に Opus で惜しまず投資する。burn 先を「消費」でなく「資産形成」に寄せる。
+
+Token-Pressure Mode: 「リミット近い / 節約して」の指示や月後半の速いペースで発動し、各 agent を1段下げ、出力を短く保つ。
+
+---
+
+## 08. 運用モデル — 3 層の自分（IC / DRI / AI Founder）
+
+"tokenmaxx, don't headcountmaxx"（YC）を個人業務全体に適用。3層を意識的に切り替える。
+
+- **IC（実行）**: Agent に任せる実装・調査・コマンド。subagent fan-out と deterministic tool で量をこなす。
+- **DRI（検証）**: 本人が結果を検証する。責任領域（法務・契約・署名・本番承認・対外発信）は AI に最終判断させない。
+- **AI Founder（発想・前提破壊）**: 「今の X、前提から疑う余地は？」を問い直し、資産になる構築物を設計する。
+
+指標はトークンの絶対値でなく3軸で見る: **Leading**（Default 反転率・3層意識率・一発受理率）/ **Lagging**（incident 数・rework 率・依頼回数）/ **Cost**。
+
+### plan-lite by risk class
+
+一律 plan-mode でなくリスククラスで計画深さを変える: `C0` read-only＝計画なし → `C2` 永続 config＝編集前承認 → `C4` upgrade / migration / ingestion / ≥3 file / 新アーキ＝着手前に full plan ＋ gate → `C6` 不可逆な外部操作＝hard gate。
+
+### audit を閉じる / builder-benchmark
+
+audit / trial / tool 評価は終了時に **verdict（adopt / reject / hold / PoC-if-X）** を決定ログに1行記録して閉じる。「AI での作り方」を外部ベンチで月次計測し（順位や点は出ないので二重アンカー rubric で現在地を測る）、frontier 基準に居続ける二速ループ（週次=leading 観測 / 月次=calibration）を回す。
+
+---
+
+## 09. ローカル専用スタック
+
+harness の中でも、外に出さず自分の機材だけで回しているレイヤがある。**記録系・調査系・自己改善系はクラウドに依存させない**のが哲学。外部に出るのは embed（ベクトル化）と chat 推論だけで、生の会話・調査データはローカルに留まる。
+
+### 2台構成（Tailscale mesh）
+
+- **MacBook**: Claude Code（この harness）。1時間ごとに会話を push。
+- **Mac Mini 64GB（headless）**: local Postgres + pgvector。毎晩 ingest ＋ dream。脳が常駐。
+- ① 夜間 auto-ingest（会話を送って取り込む）／ ② MCP query / think（いつでも引ける）。送るのは夜、引くのはいつでも。Tailscale SSH 越しに MacBook から Mac Mini の脳を直結で叩く。
+
+### ローカル常駐コンポーネント
+
+| 名前 | 役割 |
+|---|---|
+| gbrain | local second brain。全 org 会話を毎晩 ingest → embed → dream synthesize。markdown の git store が system of record。chat 上限つきでコスト bound。 |
+| VOICEVOX（ずんだもん） | 音声 UI。セッション開始ブリーフィング・完了・失敗を読み上げ。1日1回 guard。未起動なら黙って no-op。 |
+| archive | エコシステム調査の Telegram archive 等を append-only でローカル保持。公開リポでも gitignore＝非公開のまま。 |
+| launchd | Mac Mini 側の ingest / dream / dashboard 更新を無人自動化。手作業ゼロで会話が流入。 |
+| cost-guard | セッション jsonl を集計し Opus 偏重を監視。model 実測 sweep もローカルで再現可能。 |
+| evals | guard / benchmark / config の smoke を `run-evals.py` で。egress ゼロでローカル完結。 |
+
+常駐デーモンは増やさず、必要なものだけ自分の2台で回す。
+
+---
+
+## 環境・数値（2026-06-19 時点）
+
+- モデル: Opus 4.8 (1M context)
+- skills: 69 / rules: 8 / hooks: 6（実体: governance-gate.py 632行・audit-reminder.sh・post-edit-format.sh・zundamon ×3）
+- recurring tasks: 20（有効 17）
+- permission allow: 166 / deny: 11（secrets 系: .env / credentials / *.pem / id_rsa）
+- memory: L1 CLAUDE.md 階層 / L2 auto-memory 27 file / L3 gbrain
+- 設計哲学: Thin Harness, Fat Skills（Garry Tan）＋ Karpathy 4原則 ＋ tokenmaxx, don't headcountmaxx

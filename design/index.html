@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>masa-harness — personal operating system</title>
+<style>
+  :root {
+    --orange: #FB651E;
+    --orange-tint: #FFF1EA;
+    --ink: #1A1714;
+    --muted: #6E6A64;
+    --faint: #9B968E;
+    --line: #E9E6E0;
+    --bg: #FFFFFF;
+    --surface: #FAF9F6;
+    --green: #1A7F4B;
+    --red: #C0392B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    line-height: 1.6;
+    font-size: 16px;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 28px 90px; }
+
+  /* ---------- hero ---------- */
+  header { padding: 80px 0 50px; border-bottom: 1px solid var(--line); }
+  .kicker {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--orange); font-weight: 600; margin-bottom: 22px;
+  }
+  h1 { font-size: 72px; font-weight: 800; letter-spacing: -0.035em; line-height: 1; margin-bottom: 24px; }
+  .tagline { font-size: 26px; font-weight: 500; letter-spacing: -0.015em; line-height: 1.32; max-width: 720px; color: var(--ink); }
+  .tagline strong { color: var(--orange); font-weight: 700; }
+  .sub { font-size: 16px; color: var(--muted); margin-top: 18px; max-width: 680px; }
+
+  /* ---------- section scaffold ---------- */
+  section { padding: 56px 0; border-bottom: 1px solid var(--line); }
+  .label {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--faint); font-weight: 600; margin-bottom: 14px;
+  }
+  .label .n { color: var(--orange); }
+  h2 { font-size: 32px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.18; margin-bottom: 14px; }
+  .lead { font-size: 16.5px; color: var(--muted); max-width: 740px; }
+  .lead strong { color: var(--ink); font-weight: 600; }
+  .lead code, .row code, .pillar code, .note code { font-family: ui-monospace, Menlo, monospace; font-size: 0.85em; background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; color: var(--ink); }
+
+  /* ---------- diagram frame ---------- */
+  .fig { margin: 32px 0 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 28px 24px; }
+  .fig svg { display: block; width: 100%; height: auto; }
+  .fig-cap { font-size: 12.5px; color: var(--faint); margin-top: 14px; text-align: center; font-family: ui-monospace, Menlo, monospace; }
+
+  /* ---------- pillars ---------- */
+  .pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 28px; }
+  .pillars.four { grid-template-columns: repeat(2, 1fr); }
+  .pillar { border: 1px solid var(--line); border-radius: 12px; padding: 18px 18px; background: var(--bg); }
+  .pillar .pn { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--faint); display:block; margin-bottom: 4px; letter-spacing: 0.08em; }
+  .pillar .pt { font-size: 16px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.01em; }
+  .pillar .pt span { color: var(--orange); }
+  .pillar .pd { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+  .pillar .pd b { color: var(--ink); }
+
+  /* ---------- stat grid ---------- */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin-top: 28px; }
+  .stat { background: var(--bg); padding: 22px 20px; }
+  .stat .v { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 36px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; }
+  .stat .v .u { font-size: 14px; color: var(--faint); font-weight: 500; margin-left: 4px; }
+  .stat .k { font-size: 13px; color: var(--muted); margin-top: 9px; }
+  .stat.accent .v { color: var(--orange); }
+
+  /* ---------- rows ---------- */
+  .rows { margin-top: 28px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: 158px 1fr; gap: 0; border-top: 1px solid var(--line); }
+  .row:first-child { border-top: none; }
+  .row .rk { background: var(--surface); padding: 14px 16px; font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; font-weight: 600; color: var(--ink); border-right: 1px solid var(--line); }
+  .row .rk .rs { display:block; color: var(--faint); font-weight: 400; font-size: 11px; margin-top: 3px; }
+  .row .rv { padding: 14px 16px; font-size: 14px; color: var(--muted); }
+  .row .rv b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- verdict tags ---------- */
+  .tag { display:inline-block; font-family: ui-monospace, Menlo, monospace; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.04em; vertical-align: middle; }
+  .tag.block { background: #FBEAE8; color: var(--red); border: 1px solid #F0C5BF; }
+  .tag.log   { background: #FFF7E6; color: #B7791F; border: 1px solid #F0DCAE; }
+  .tag.allow { background: #EAF6EF; color: var(--green); border: 1px solid #BFE3CE; }
+
+  /* ---------- caps ---------- */
+  .caps { margin-top: 28px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .cap { display: flex; gap: 14px; align-items: baseline; border: 1px solid var(--line); border-radius: 12px; padding: 15px 18px; }
+  .cap .cv { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 16px; font-weight: 600; color: var(--orange); white-space: nowrap; }
+  .cap .cb { font-size: 14.5px; }
+  .cap .cb b { font-weight: 700; }
+
+  /* ---------- svg shared text ---------- */
+  .svg-t { font-family: -apple-system, "Noto Sans JP", sans-serif; font-size: 13px; fill: var(--ink); font-weight: 600; }
+  .svg-s { font-family: ui-monospace, Menlo, monospace; font-size: 11px; fill: var(--faint); }
+  .svg-l { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; fill: var(--muted); }
+  .svg-o { font-family: ui-monospace, Menlo, monospace; font-size: 13px; fill: var(--orange); font-weight: 700; }
+
+  @media (max-width: 720px) {
+    h1 { font-size: 50px; }
+    .tagline { font-size: 21px; }
+    h2 { font-size: 26px; }
+    .pillars, .pillars.four, .stats, .caps { grid-template-columns: 1fr; }
+    .row { grid-template-columns: 1fr; }
+    .row .rk { border-right: none; border-bottom: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <header>
+    <div class="kicker">Personal Claude Code harness</div>
+    <h1>masa-harness</h1>
+    <p class="tagline">エージェントには賢く考えさせ、<br><strong>ハーネスは薄く、実行は確実に。</strong></p>
+    <p class="sub">知能（skill）・実行（hook）・記憶（memory）を別レイヤに分離した、自分専用の operating system。</p>
+  </header>
+
+  <!-- ============ 01 CONCEPT ============ -->
+  <section id="concept">
+    <div class="label"><span class="n">01</span> &nbsp;設計哲学</div>
+    <h2>賢さは skill へ。執行は tool へ。</h2>
+    <p class="lead">CLAUDE.md は <strong>pointer ＋ 必ず効く reflex</strong> だけに保ち、手順は書かない。知能・実行・記憶を分離する。</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 760 250" role="img" aria-label="薄いハーネスと厚いスキルの図">
+        <rect x="30" y="30" width="700" height="44" rx="9" fill="#FFF1EA" stroke="#FB651E" stroke-width="1.5"/>
+        <text x="50" y="50" class="svg-t" style="fill:#1A1714">CLAUDE.md — thin harness</text>
+        <text x="50" y="66" class="svg-s">pointer ＋ reflex のみ（143 行）。手順は書かない</text>
+        <text x="690" y="58" text-anchor="end" class="svg-o">薄く保つ</text>
+
+        <text x="135" y="108" text-anchor="middle" class="svg-l" style="fill:#9B968E">知能 → SKILL</text>
+        <rect x="30" y="118" width="210" height="96" rx="9" fill="#fff" stroke="#E9E6E0"/>
+        <text x="135" y="150" text-anchor="middle" class="svg-t">69 skills</text>
+        <text x="135" y="172" text-anchor="middle" class="svg-s">ドメイン手順・判断ロジック</text>
+        <text x="135" y="190" text-anchor="middle" class="svg-s">on-demand ロード</text>
+
+        <text x="380" y="108" text-anchor="middle" class="svg-l" style="fill:#9B968E">実行 → HOOK</text>
+        <rect x="275" y="118" width="210" height="96" rx="9" fill="#fff" stroke="#FB651E"/>
+        <text x="380" y="150" text-anchor="middle" class="svg-t">6 hooks</text>
+        <text x="380" y="172" text-anchor="middle" class="svg-s">governance gate（632 行）</text>
+        <text x="380" y="190" text-anchor="middle" class="svg-s">BLOCK / LOG / ALLOW</text>
+
+        <text x="625" y="108" text-anchor="middle" class="svg-l" style="fill:#9B968E">記憶 → MEMORY</text>
+        <rect x="520" y="118" width="210" height="96" rx="9" fill="#fff" stroke="#E9E6E0"/>
+        <text x="625" y="150" text-anchor="middle" class="svg-t">3層 memory</text>
+        <text x="625" y="172" text-anchor="middle" class="svg-s">L1 規約 / L2 文脈 / L3 脳</text>
+        <text x="625" y="190" text-anchor="middle" class="svg-s">決定論 → semantic</text>
+
+        <path d="M135 74 L135 116" stroke="#9B968E" stroke-width="1.3" marker-end="url(#c1)"/>
+        <path d="M380 74 L380 116" stroke="#FB651E" stroke-width="1.3" marker-end="url(#c2)"/>
+        <path d="M625 74 L625 116" stroke="#9B968E" stroke-width="1.3" marker-end="url(#c1)"/>
+        <defs>
+          <marker id="c1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M1 1 L6 4 L1 7" fill="none" stroke="#9B968E" stroke-width="1.3"/></marker>
+          <marker id="c2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M1 1 L6 4 L1 7" fill="none" stroke="#FB651E" stroke-width="1.3"/></marker>
+        </defs>
+      </svg>
+      <div class="fig-cap">harness は配線図だけ持ち、賢さ・執行・記憶は別レイヤに分離する</div>
+    </div>
+
+    <div class="pillars four">
+      <div class="pillar"><span class="pn">PRINCIPLE 1</span><div class="pt"><span>Think</span> Before Coding</div><div class="pd">不明点は止めて質問。<b>docs を grep してから訊く</b>。</div></div>
+      <div class="pillar"><span class="pn">PRINCIPLE 2</span><div class="pt"><span>Simplicity</span> First</div><div class="pd">依頼を解く<b>最小コード</b>のみ。投機的な抽象化はしない。</div></div>
+      <div class="pillar"><span class="pn">PRINCIPLE 3</span><div class="pt"><span>Surgical</span> Changes</div><div class="pd">触るのは必要箇所のみ。概念を変えたら<b>旧名で全域 grep</b>。</div></div>
+      <div class="pillar"><span class="pn">PRINCIPLE 4</span><div class="pt"><span>Goal-Driven</span> Execution</div><div class="pd"><b>検証可能な成功基準</b>に変換。テストを通して報告。</div></div>
+    </div>
+  </section>
+
+  <!-- ============ 02 ARCHITECTURE ============ -->
+  <section id="arch">
+    <div class="label"><span class="n">02</span> &nbsp;全体構成</div>
+    <h2>5 レイヤで分業する</h2>
+    <p class="lead">入力は必ず ① の hook 層を通過してから実行。各層は <strong>config-hygiene の owner マップ</strong>で「足す / 削る / 監査する」係が単一に決まっている（MECE）。</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 760 300" role="img" aria-label="5層アーキテクチャ図">
+        <rect x="280" y="14" width="200" height="34" rx="8" fill="#fff" stroke="#E9E6E0"/>
+        <text x="380" y="36" text-anchor="middle" class="svg-t">ユーザーの依頼 / セッション</text>
+
+        <rect x="30" y="66" width="700" height="46" rx="9" fill="#FFF1EA" stroke="#FB651E" stroke-width="1.5"/>
+        <text x="46" y="86" class="svg-o">① settings.json ＋ hooks</text>
+        <text x="46" y="102" class="svg-s">166 allow / 6 hook（PreToolUse 執行・SessionStart 通知・PostToolUse format・Stop 音声）</text>
+
+        <rect x="30" y="122" width="345" height="60" rx="9" fill="#fff" stroke="#E9E6E0"/>
+        <text x="46" y="142" class="svg-t">② rules ／ CLAUDE.md</text>
+        <text x="46" y="160" class="svg-s">8 rule（言語別・model route・config</text>
+        <text x="46" y="174" class="svg-s">hygiene・skill template・web debug）</text>
+
+        <rect x="390" y="122" width="340" height="60" rx="9" fill="#fff" stroke="#E9E6E0"/>
+        <text x="406" y="142" class="svg-t">③ skills ／ commands</text>
+        <text x="406" y="160" class="svg-s">69 skill（gstack 由来 ＋ 自作 meta-skill）</text>
+        <text x="406" y="174" class="svg-s">template 準拠・DRY/MECE で監査</text>
+
+        <rect x="30" y="192" width="345" height="60" rx="9" fill="#fff" stroke="#E9E6E0"/>
+        <text x="46" y="212" class="svg-t">④ memory（3層）</text>
+        <text x="46" y="230" class="svg-s">L1 CLAUDE.md / L2 auto-memory 27</text>
+        <text x="46" y="244" class="svg-s">file / L3 gbrain（semantic）</text>
+
+        <rect x="390" y="192" width="340" height="60" rx="9" fill="#fff" stroke="#E9E6E0"/>
+        <text x="406" y="212" class="svg-t">⑤ state</text>
+        <text x="406" y="230" class="svg-s">recurring-tasks.json（20 task / 17 有効）</text>
+        <text x="406" y="244" class="svg-s">governance / ops ログ</text>
+
+        <rect x="280" y="262" width="200" height="30" rx="8" fill="#FFF1EA" stroke="#FB651E"/>
+        <text x="380" y="282" text-anchor="middle" class="svg-o">確実で追跡可能なアクション</text>
+
+        <path d="M380 48 L380 64" stroke="#9B968E" stroke-width="1.3"/>
+        <path d="M380 252 L380 260" stroke="#FB651E" stroke-width="1.3"/>
+      </svg>
+      <div class="fig-cap">各層の owner が固定され、監査の重複（nag）も抜け（GAP）も起きない</div>
+    </div>
+
+    <div class="rows">
+      <div class="row"><div class="rk">① hooks<span class="rs">config-audit</span></div><div class="rv">構造・permission・hook 健全性 ＋ CLAUDE.md/rules の<b>剪定（削る側）</b></div></div>
+      <div class="row"><div class="rk">② rules<span class="rs">lesson-harvest</span></div><div class="rv">繰り返し指摘 → ルールへ<b>追記（足す側）</b>。「2回受けたら再発防止」を自動執行</div></div>
+      <div class="row"><div class="rk">③ skills<span class="rs">skill-audit</span></div><div class="rv">template 準拠・<b>DRY/MECE</b>・sprawl 閾値（8–12個）・未使用 disable</div></div>
+      <div class="row"><div class="rk">④ memory<span class="rs">memory-cleanup</span></div><div class="rv">cross-project 重複排除・<b>L1 昇格候補</b>・stale path 検出</div></div>
+      <div class="row"><div class="rk">⑤ state<span class="rs">recurring JSON</span></div><div class="rv">定期タスクを<b>単一レジストリ</b>に集約。SessionStart hook が通知</div></div>
+    </div>
+  </section>
+
+  <!-- ============ 03 GOVERNANCE ============ -->
+  <section id="governance">
+    <div class="label"><span class="n">03</span> &nbsp;ガバナンス — ローカル deterministic hook</div>
+    <h2>危険操作はモデルに判断させず hook で止める</h2>
+    <p class="lead">「責任領域（本番デプロイ承認・署名・対外発信）は AI に最終判断させない」を <strong>PreToolUse hook（<code>governance-gate.py</code>・632 行）</strong>で執行。コマンド文字列を解析し3挙動に振り分ける。</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 760 230" role="img" aria-label="governance gate の3分岐図">
+        <rect x="20" y="92" width="150" height="46" rx="9" fill="#fff" stroke="#E9E6E0"/>
+        <text x="95" y="112" text-anchor="middle" class="svg-t">tool 呼び出し</text>
+        <text x="95" y="128" text-anchor="middle" class="svg-s">Bash / Edit / Write</text>
+
+        <rect x="220" y="86" width="150" height="58" rx="9" fill="#FFF1EA" stroke="#FB651E" stroke-width="1.5"/>
+        <text x="295" y="110" text-anchor="middle" class="svg-t" style="fill:#1A1714">governance-gate</text>
+        <text x="295" y="128" text-anchor="middle" class="svg-s">パターン照合（決定論）</text>
+
+        <path d="M170 115 L218 115" stroke="#9B968E" stroke-width="1.4" marker-end="url(#g1)"/>
+
+        <rect x="430" y="20" width="310" height="56" rx="9" fill="#FBEAE8" stroke="#F0C5BF"/>
+        <text x="446" y="42" class="svg-t" style="fill:#C0392B">BLOCK（exit 2）</text>
+        <text x="446" y="60" class="svg-s">破壊 rm / global pkg install / settings・CLAUDE.md 改変 / .env / vendor</text>
+
+        <rect x="430" y="86" width="310" height="56" rx="9" fill="#FFF7E6" stroke="#F0DCAE"/>
+        <text x="446" y="108" class="svg-t" style="fill:#B7791F">LOG（exit 0 ＋ ops ログ）</text>
+        <text x="446" y="126" class="svg-s">可逆だが team 可視な governance mutation を記録して通す</text>
+
+        <rect x="430" y="152" width="310" height="56" rx="9" fill="#EAF6EF" stroke="#BFE3CE"/>
+        <text x="446" y="174" class="svg-t" style="fill:#1A7F4B">ALLOW（exit 0）</text>
+        <text x="446" y="192" class="svg-s">それ以外は素通し。日常操作の摩擦をゼロに</text>
+
+        <path d="M370 105 L428 50" stroke="#C0392B" stroke-width="1.2" marker-end="url(#g2)"/>
+        <path d="M370 115 L428 114" stroke="#B7791F" stroke-width="1.2" marker-end="url(#g3)"/>
+        <path d="M370 125 L428 178" stroke="#1A7F4B" stroke-width="1.2" marker-end="url(#g4)"/>
+        <defs>
+          <marker id="g1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M1 1 L6 4 L1 7" fill="none" stroke="#9B968E" stroke-width="1.3"/></marker>
+          <marker id="g2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M1 1 L6 4 L1 7" fill="none" stroke="#C0392B" stroke-width="1.2"/></marker>
+          <marker id="g3" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M1 1 L6 4 L1 7" fill="none" stroke="#B7791F" stroke-width="1.2"/></marker>
+          <marker id="g4" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M1 1 L6 4 L1 7" fill="none" stroke="#1A7F4B" stroke-width="1.2"/></marker>
+        </defs>
+      </svg>
+      <div class="fig-cap"><span class="tag block">BLOCK</span> 時は stderr に理由を返してモデルに再考させる。override は本人の手動実行のみ</div>
+    </div>
+  </section>
+
+  <!-- ============ 04 MEMORY ============ -->
+  <section id="memory">
+    <div class="label"><span class="n">04</span> &nbsp;記憶 — 3層モデル</div>
+    <h2>決定論から semantic まで振り分ける</h2>
+    <p class="lead">保存前に「<strong>2 project 以上で要る？ → L1／単一 PJ → L2／想起だけ → 放置（脳が自動 ingest）</strong>」を通す。cross-project に効く規約を単一 PJ に埋もれさせない。</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 760 200" role="img" aria-label="3層メモリ図">
+        <rect x="20" y="34" width="230" height="132" rx="11" fill="#FFF1EA" stroke="#FB651E" stroke-width="1.5"/>
+        <text x="135" y="60" text-anchor="middle" class="svg-o">L1 — 規約（決定論）</text>
+        <text x="135" y="84" text-anchor="middle" class="svg-t" style="fill:#1A1714">CLAUDE.md 階層</text>
+        <text x="135" y="106" text-anchor="middle" class="svg-s">必ず効く reflex / rule</text>
+        <text x="135" y="124" text-anchor="middle" class="svg-s">2 PJ 以上に効く規約</text>
+        <text x="135" y="146" text-anchor="middle" class="svg-s">毎セッション読まれ確実に発火</text>
+
+        <rect x="265" y="34" width="230" height="132" rx="11" fill="#fff" stroke="#E9E6E0"/>
+        <text x="380" y="60" text-anchor="middle" class="svg-l" style="fill:#6E6A64">L2 — 文脈（PJ 固有）</text>
+        <text x="380" y="84" text-anchor="middle" class="svg-t">auto-memory</text>
+        <text x="380" y="106" text-anchor="middle" class="svg-s">27 file・MEMORY.md が index</text>
+        <text x="380" y="124" text-anchor="middle" class="svg-s">user / feedback / project / ref</text>
+        <text x="380" y="146" text-anchor="middle" class="svg-s">単一 PJ の作業文脈・好み</text>
+
+        <rect x="510" y="34" width="230" height="132" rx="11" fill="#fff" stroke="#E9E6E0"/>
+        <text x="625" y="60" text-anchor="middle" class="svg-l" style="fill:#6E6A64">L3 — 脳（semantic）</text>
+        <text x="625" y="84" text-anchor="middle" class="svg-t">gbrain</text>
+        <text x="625" y="106" text-anchor="middle" class="svg-s">全会話を毎晩 ingest</text>
+        <text x="625" y="124" text-anchor="middle" class="svg-s">vector + keyword hybrid</text>
+        <text x="625" y="146" text-anchor="middle" class="svg-s">引用付きで答えを返す</text>
+
+        <text x="256" y="104" text-anchor="middle" class="svg-o">↑昇格</text>
+        <text x="503" y="104" text-anchor="middle" class="svg-s">→自動</text>
+      </svg>
+      <div class="fig-cap">確実に効かせたいものは L1、想起補助でよいものは L3 へ</div>
+    </div>
+
+    <div class="caps">
+      <div class="cap"><div class="cv">grep</div><div class="cb"><b>正規表現 / 完全一致</b> — 確定検索は L3 に投げない</div></div>
+      <div class="cap"><div class="cv">query ~3s</div><div class="cb"><b>semantic な「どこで？」</b> — 過去の決定を即引き出す</div></div>
+      <div class="cap"><div class="cv">think ~57s</div><div class="cb"><b>経緯の再構成</b> — 引用付きでまとめ直す</div></div>
+      <div class="cap"><div class="cv">nightly</div><div class="cb"><b>放っておくと育つ</b> — dream で自己増殖</div></div>
+    </div>
+  </section>
+
+  <!-- ============ 05 SKILLS ============ -->
+  <section id="skills">
+    <div class="label"><span class="n">05</span> &nbsp;Skills — registry ＋ self-improving 監査</div>
+    <h2>テンプレ準拠で監査し続ける</h2>
+    <p class="lead">命名規則 <strong><code>&lt;namespace&gt;-&lt;object&gt;-&lt;action&gt;</code></strong> と固定テンプレに揃える。名前だけで責務境界が読めること＝誤発火を防ぐ。<strong>足す・削る・守る</strong>が別 owner。</p>
+
+    <div class="stats">
+      <div class="stat accent"><div class="v">69<span class="u">skills</span></div><div class="k">登録 skill 総数</div></div>
+      <div class="stat"><div class="v">8<span class="u">rules</span></div><div class="k">グローバル rule</div></div>
+      <div class="stat"><div class="v">8–12<span class="u">個</span></div><div class="k">sprawl の分水嶺（超過＝context tax）</div></div>
+    </div>
+
+    <div class="pillars">
+      <div class="pillar"><span class="pn">足す係</span><div class="pt"><span>lesson-harvest</span></div><div class="pd">transcript から繰り返し指摘を収穫 → ルール追記を起案する <b>self-improving loop</b>。</div></div>
+      <div class="pillar"><span class="pn">削る係</span><div class="pt"><span>config-audit</span></div><div class="pd">重複・stale・肥大を<b>剪定</b>。「lint であって nag でない」。</div></div>
+      <div class="pillar"><span class="pn">守る係</span><div class="pt"><span>oss-clone-security</span></div><div class="pd">外部リポは <b>gitleaks → trivy → IOC grep</b>。スキャン前の install/build 禁止。</div></div>
+    </div>
+  </section>
+
+  <!-- ============ 06 RECURRING ============ -->
+  <section id="recurring">
+    <div class="label"><span class="n">06</span> &nbsp;定期タスク — 単一レジストリ</div>
+    <h2>時間ベースの仕事は 1 つの JSON に</h2>
+    <p class="lead"><strong><code>recurring-tasks.json</code></strong> が SoT（20 task / 17 有効）。SessionStart hook が due/overdue を毎セッション通知。追加は1行、完了は <code>last_run</code> 更新で nag が止む。</p>
+
+    <div class="rows">
+      <div class="row"><div class="rk">週次<span class="rs">7 day</span></div><div class="rv">hygiene 監査・news・lesson-harvest・コストガード・benchmark・org rollup</div></div>
+      <div class="row"><div class="rk">日次<span class="rs">1 day</span></div><div class="rv">脳の前夜レポート（ingest log ＋ API 使用量）・外部ブロッカー経過日更新</div></div>
+      <div class="row"><div class="rk">月次<span class="rs">30 day</span></div><div class="rv">試験項目の prune・archive 圧縮判断・benchmark 外部 calibration</div></div>
+      <div class="row"><div class="rk">disabled<span class="rs">保管枠</span></div><div class="rv">廃止 task も<b>消さず残す</b>。なぜ止めたかの判断ログを保持</div></div>
+    </div>
+  </section>
+
+  <!-- ============ 07 MODEL ROUTING ============ -->
+  <section id="routing">
+    <div class="label"><span class="n">07</span> &nbsp;モデルルート — 実測 frontier</div>
+    <h2>タスク特性 × 残量で自動選択</h2>
+    <p class="lead"><strong>デフォルトは Sonnet</strong>。Opus は「Sonnet では明らかに不十分」なときだけ。月次トークン予算は <strong>hard constraint</strong>。ルーティングは主張でなく実測で裏取りする。</p>
+
+    <div class="rows">
+      <div class="row"><div class="rk">Explore<span class="rs">既定 Haiku</span></div><div class="rv">検索 / grep / 浅読み。<b>実測で grade 1.0 を Sonnet 比 1/3 コスト</b>＝frontier 上</div></div>
+      <div class="row"><div class="rk">general / Plan<span class="rs">既定 Sonnet</span></div><div class="rv">中庸な調査・計画。>10 file / 新規アーキ / セキュリティのみ Opus</div></div>
+      <div class="row"><div class="rk">資産形成<span class="rs">Opus 投資枠</span></div><div class="rv">「一度作れば繰り返し効く構築物」には Opus を惜しまない（消費でなく<b>資産形成</b>）</div></div>
+    </div>
+  </section>
+
+  <!-- ============ 08 OPERATING MODEL ============ -->
+  <section id="operating">
+    <div class="label"><span class="n">08</span> &nbsp;運用モデル — 3 層の自分</div>
+    <h2>IC・DRI・AI Founder を切り替える</h2>
+    <p class="lead">"tokenmaxx, don't headcountmaxx" を個人業務に適用。指標はトークンの絶対値でなく <strong>Leading / Lagging / Cost</strong> の3軸で見る。</p>
+
+    <div class="pillars">
+      <div class="pillar"><span class="pn">LAYER · 実行</span><div class="pt"><span>IC</span></div><div class="pd">Agent fan-out と deterministic tool で量をこなす。</div></div>
+      <div class="pillar"><span class="pn">LAYER · 検証</span><div class="pt"><span>DRI</span></div><div class="pd">本人が検証。<b>責任領域は AI に最終判断させない</b>。</div></div>
+      <div class="pillar"><span class="pn">LAYER · 発想</span><div class="pt"><span>AI Founder</span></div><div class="pd">「前提から疑う余地は？」資産になる構築物を設計。</div></div>
+    </div>
+  </section>
+
+  <!-- ============ 09 LOCAL-ONLY ============ -->
+  <section id="local">
+    <div class="label"><span class="n">09</span> &nbsp;ローカル専用スタック</div>
+    <h2>クラウドに出さない部分</h2>
+    <p class="lead"><strong>記録系・調査系・自己改善系はクラウドに依存させない</strong>。外部に出るのは embed と chat 推論だけで、生の会話・調査データはローカルに留まる。</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 760 200" role="img" aria-label="ローカル2台構成図">
+        <rect x="20" y="58" width="200" height="84" rx="11" fill="#fff" stroke="#E9E6E0"/>
+        <text x="120" y="88" text-anchor="middle" class="svg-t">MacBook</text>
+        <text x="120" y="108" text-anchor="middle" class="svg-s">Claude Code（この harness）</text>
+        <text x="120" y="126" text-anchor="middle" class="svg-s">1h ごとに会話を push</text>
+
+        <rect x="540" y="46" width="200" height="108" rx="11" fill="#FFF1EA" stroke="#FB651E" stroke-width="1.5"/>
+        <text x="640" y="76" text-anchor="middle" class="svg-t" style="fill:#1A1714">Mac Mini 64GB</text>
+        <text x="640" y="96" text-anchor="middle" class="svg-s">headless サーバ</text>
+        <text x="640" y="114" text-anchor="middle" class="svg-s">local Postgres + pgvector</text>
+        <text x="640" y="132" text-anchor="middle" class="svg-s">毎晩 ingest ＋ dream</text>
+
+        <path d="M222 86 L538 74" stroke="#9B968E" stroke-width="1.6" marker-end="url(#l1)"/>
+        <text x="380" y="60" text-anchor="middle" class="svg-s">① 夜間 auto-ingest</text>
+        <path d="M538 128 L224 118" stroke="#FB651E" stroke-width="1.6" marker-end="url(#l2)"/>
+        <text x="380" y="146" text-anchor="middle" class="svg-o">② MCP query / think（いつでも）</text>
+
+        <rect x="334" y="82" width="92" height="22" rx="11" fill="#fff" stroke="#E9E6E0"/>
+        <text x="380" y="97" text-anchor="middle" class="svg-s">Tailscale SSH</text>
+        <defs>
+          <marker id="l1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M1 1 L6 4 L1 7" fill="none" stroke="#9B968E" stroke-width="1.3"/></marker>
+          <marker id="l2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M1 1 L6 4 L1 7" fill="none" stroke="#FB651E" stroke-width="1.3"/></marker>
+        </defs>
+      </svg>
+      <div class="fig-cap">脳は常に Mac Mini に常駐。送るのは夜、引くのはいつでも</div>
+    </div>
+
+    <div class="caps">
+      <div class="cap"><div class="cv">gbrain</div><div class="cb"><b>local second brain</b> — 毎晩 ingest → embed → dream</div></div>
+      <div class="cap"><div class="cv">VOICEVOX</div><div class="cb"><b>音声 UI</b> — 開始/完了/失敗を読み上げ</div></div>
+      <div class="cap"><div class="cv">archive</div><div class="cb"><b>調査アーカイブ</b> — append-only・gitignore で非公開</div></div>
+      <div class="cap"><div class="cv">launchd</div><div class="cb"><b>無人パイプライン</b> — ingest/dream を自動化</div></div>
+      <div class="cap"><div class="cv">cost-guard</div><div class="cb"><b>ローカル集計</b> — Opus 偏重を監視</div></div>
+      <div class="cap"><div class="cv">evals</div><div class="cb"><b>自己点検</b> — <code>run-evals.py</code>・egress ゼロ</div></div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

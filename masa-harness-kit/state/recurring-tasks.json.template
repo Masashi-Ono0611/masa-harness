@@ -1,0 +1,43 @@
+{
+  "comment": "時間ベースの定期タスクの単一レジストリ。SessionStart hook (audit-reminder.sh) がこれを読み、due/overdue のタスクをセッション開始時に通知する。タスクを足すには tasks[] に1件追加するだけ。実行したら last_run を YYYY-MM-DD に更新すると通知が止まる。配置先: ~/.claude/state/recurring-tasks.json (.template を外す)。",
+  "schema_version": 1,
+  "trigger_types": {
+    "session-start-reminder": "audit-reminder.sh が due/overdue 時にセッション開始で通知する（現状この trigger のみ実装済み）。",
+    "launchd": "(将来枠) macOS launchd で実行。",
+    "desktop-task": "(将来枠) デスクトップのスケジュールタスク。",
+    "disabled": "記録として残すが通知しない（なぜ止めたかの判断ログ保持に使う）。"
+  },
+  "tasks": [
+    {
+      "label": "週次の自己改善ループ (lesson-harvest)",
+      "command": "/lesson-harvest",
+      "interval_days": 7,
+      "last_run": "2026-01-01",
+      "warn_window_days": null,
+      "trigger": "session-start-reminder",
+      "enabled": true,
+      "notes": "学習サイクルの核。直近の会話履歴 (transcript) を振り返り、2回以上の指摘・訂正を CLAUDE.md / rules / memory へ昇格させる。記憶を自動蓄積する仕組み (semantic 検索などの外部記憶) が無い環境では、この週次の振り返りが『気づき → ルール化』の輪を閉じる主経路になる。"
+    },
+    {
+      "label": "週次の config hygiene 監査 (claude-config-audit)",
+      "command": "/claude-config-audit",
+      "interval_days": 7,
+      "last_run": "2026-01-01",
+      "warn_window_days": null,
+      "trigger": "session-start-reminder",
+      "enabled": true,
+      "notes": "settings / hooks / rules の重複・古い記述・肥大を剪定する (削る係)。ルールを足す lesson-harvest と対。"
+    },
+    {
+      "label": "隔週の skill 構造監査 (claude-skill-audit)",
+      "command": "/claude-skill-audit",
+      "interval_days": 14,
+      "last_run": "2026-01-01",
+      "warn_window_days": null,
+      "trigger": "session-start-reminder",
+      "enabled": true,
+      "notes": "skill のテンプレ準拠・個数の増えすぎ (8〜12 個が分水嶺)・未使用 skill の無効化を点検する。"
+    }
+  ],
+  "_how_to_add": "タスクを足すには tasks[] に1件追加するだけ。command は skill ディレクトリ名で `/<name>`（user-scope skill の起動書式。plugin 経由なら `/<plugin>:<name>`）。interval_days の 1/4 (1〜14 日に丸め) 前から通知され、warn_window_days で個別に上書きできる。実行したら last_run を当日に更新すると通知が止まる。"
+}
