@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-06-21
+
+配布 config の secret 読み取り防御を広げ、governance-gate の射程（sandbox ではない）を明文化したリリース。
+
+### セキュリティ
+- **`settings.json.template` の `deny` を拡張** … 既存の `.env*` / `secrets/**` / `credentials*` / `*.pem` / `id_rsa*` に加え、`*.key` / `*.p12` / `*.pfx` / `*.keystore` / `*.jks` / `.npmrc` / `.pgpass` / `kubeconfig` / `*.kubeconfig` / `.aws/**` / `.ssh/**` / `.netrc` / `service-account*.json` を Read 拒否に追加。クラウド認証情報・SSH 秘密鍵・パッケージレジストリトークン等の誤読を Read ツール経路で塞ぐ。
+- **CLAUDE.md skeleton に「gate は sandbox ではない」注記を追加** … `governance-gate.py` は durable-state mutation の暴発防止であって sandbox ではない（Bash の write-primitive `cp`/`mv`/`tee`/`python -c open(w)` や機微ファイルの read `cat`/`grep` は素通しする）ことを明記。秘密の最終防御は「機微を Bash 経由で読み書きしない／settings.json・実 .env は Edit 経由で触る（hook が止める）」という運用規律であり、gate を sandbox 代わりにしない、と期待値を揃える。
+
 ## [1.3.0] - 2026-06-20
 
 Opus 4.8 の「ツール呼び出しが素テキストとして漏れる」既知バグへの保護を一式追加したリリース。

@@ -86,4 +86,5 @@
   - **ALLOW**: それ以外は素通し（日常操作の摩擦をゼロに）
 - 保護対象 branch / 本番 workflow は env `GATE_PROTECTED_BRANCHES` / `GATE_PROD_WORKFLOWS` で各自設定（既定は一般的な命名）
 - override は本人の手動実行のみ
+- **gate は durable-state mutation の暴発防止であって sandbox ではない**＝Bash の write-primitive（`cp`/`mv`/`tee`/`python -c open(w)`）や機微ファイル read（`cat`/`grep`）は素通しする。秘密の最終防御は「機微を Bash 経由で読み書きしない／settings.json・実 .env は Edit 経由で触る（hook が止める）」運用側の規律であり、gate を sandbox 代わりにしない
 - **`governance-gate.py` は「コマンド文字列を literal grep」で BLOCK 判定する**ため、説明コメント／`grep` パターン／commit message／PR body に危険語の文字列を入れただけで、無関係な `git` / `gh` / `grep` まで巻き添えブロックされることがある。**実行コマンド以外でも危険語の bigram を地の文に書かない**（言い換える）。誤検知で止まったら、**まず言い換えて即リトライ**（真に危険な実操作は別ルールでガード済みなので、言い換えで通るものは false positive）
