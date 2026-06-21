@@ -1,6 +1,6 @@
 CLAUDE.md.template	~/.claude/CLAUDE.md	generalized	fdc537c4f5dd7f0e3e5459f742af2398cbf3c631018cc37469936888e66c108e
 settings.json.template	~/.claude/settings.json	generalized	2bd96349e53688b3da03906afc9eb157d1a805f7d6f8646e01d68edf0c9db7d3
-state/recurring-tasks.json.template	~/.claude/state/recurring-tasks.json	generalized	71d9db2f1cb5fd783fc2ac2b1d0b321e8ef0d67585efa222f2cc5302ec133364
+state/recurring-tasks.json.template	~/.claude/state/recurring-tasks.json	generalized	573d20016d10dcba79604a342533dfd3ac9f056f610df53280f4c28f58f91bef
 rules/typescript.md	~/.claude/rules/typescript.md	verbatim	0498cd786a7e7c035a4776f3dd93be3ed04e7de5d4493c94afc8209c69dbc566
 rules/skill-template.md	~/.claude/rules/skill-template.md	generalized	0d71e215cdb3b5298df196af1293c3b3f06406cc292fdfc27f916f8615d3474c
 rules/agent-model-routing.md	~/.claude/rules/agent-model-routing.md	generalized	d1223af8c82c67ddf0b124cd672b449d3c13898012551ce24216dcadaaca8aee
