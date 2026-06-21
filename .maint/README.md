@@ -51,7 +51,7 @@ bash .maint/kit-sync.sh pack                  # 6. tar.gz 再生成
 ## kit-native ファイル（本体ソース無し＝drift 追跡対象外）
 
 本体に対応物が無く配布の仕組みのために作ったファイルは manifest に載せない（drift 検出の対象外）。現在:
-`install.sh` / `setup.sh` / `VERSION` / `skills/masa-harness-audit/`、repo ルートの `README.md` / `CHANGELOG.md` / `.github/workflows/release.yml`。
+`install.sh` / `setup.sh` / `VERSION` / `skills/masa-harness-audit/` / `docs/`（`design.md` / `multi-model-review.md`）、repo ルートの `README.md` / `CHANGELOG.md` / `.github/workflows/release.yml`。
 
 ## リリース（GitHub Release）
 

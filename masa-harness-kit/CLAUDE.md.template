@@ -49,8 +49,9 @@
 - 新規 skill 生成 / 既存 skill 大幅改修時は `@~/.claude/rules/skill-template.md` に準拠する
 - skill の起動は `/<skill ディレクトリ名>`（例 `/lesson-harvest`）。`disable-model-invocation: true` の skill も手動 `/<name>` 起動は有効
 
-## Agent モデルルート
+## Agent モデルルート / マルチモデル review
 @~/.claude/rules/agent-model-routing.md
+- 外部モデル（Codex / Antigravity）でのセルフ PR レビューは `/review:self-multi-model`。外部CLIは任意で、無くても Claude 単独で動く。導入・認証は配布リポの `docs/multi-model-review.md` 参照
 
 ## Config Hygiene（環境保守の owner マップ）
 @~/.claude/rules/config-hygiene.md

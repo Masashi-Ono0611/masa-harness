@@ -136,6 +136,23 @@ Agent({
 
 ---
 
+## 外部モデル review のルーティング（Codex / Antigravity CLI）
+
+Claude subagent と同じ「タスク特性で重さを変える」「腐る軸（モデル名）を1箇所に隔離」を、マルチモデル PR review（Codex primary / Antigravity CLI fallback + Claude）にも適用する。**本ファイルは判断軸（恒久）だけを持ち、モデル名・実フラグ等の腐る具体は review command / skill の SoT ブロックに置く**（上の Expiry Date Axis）。同梱の `/review:self-multi-model` command がこの review を実行する。
+
+**腐らない判断軸（恒久）**:
+- **review モデルは session 既定に依存させず明示固定する**: codex / agy の review は、何も指定しなければ CLI の session 既定モデルを継承する。session を別作業で安いモデルへ切替えると review も道連れで弱くなる。review は明示的に強モデルへ pin して decouple する（Claude 側で `model` を明示するのと同じ思想）。
+- **effort を先に疑う（tier より前に）**: 上の Claude 表と同様、モデル tier を上げる前に推論深さ（codex `model_reasoning_effort` / agy はモデル tier 表記 Low/Medium/High）で足りるか見る。agentic な `codex review` は repo 自己探索でクォータを食うので、最大（codex `xhigh`）でなく `high` 既定が pragmatic（bounded な chunked `codex exec` single-shot は強めでも可）。
+- **別ベンダー CLI は Claude Code のアップデートで自動追従しない**: codex / agy のモデル名は Claude 側 update では一切変わらない。command / CI にハードコードした名前は手動更新になる。だから**腐る軸（モデル名）を SoT ブロック1箇所に集約**し、世代交代時の手動更新点を最小化する。
+
+**腐る具体（モデル名・実フラグ）の置き場（pointer・ここで重複させない）**:
+- 同梱 command: `~/.claude/commands/review/self-multi-model.md` の「入力検証」冒頭 SoT ブロック（`CODEX_REVIEW_MODEL` / `CODEX_REVIEW_EFFORT` / `AGY_REVIEW_MODEL`）。外部CLIの導入・認証は `docs/multi-model-review.md`
+- repo ごとに PR フロー全体を自動化したいなら、各 repo の `.claude/skills/<repo>-multi-model-review/` に orchestrator skill を作り、そこにモデル名 SoT を持たせて本 command を呼ぶ
+- フラグ規約: `codex review` は `-c key=value` のみ（`-p/--profile` 非対応）→ `codex review -c model=… -c model_reasoning_effort=… --base`。`codex exec` は `-c`/`-m` 両対応。Antigravity CLI は `agy --model "<agy models の表示名>" -p`（例 `Gemini 3.1 Pro (High)`）。旧 gemini CLI は 2026-06-18 に無料/AI Pro/Ultra 枠停止 → Antigravity CLI(agy) へ移行（無料 Starter Quota）。
+- diff-only 原則・fallback 連鎖（Codex→Antigravity CLI(agy)→Gemini bot→Claude）・出力フォーマットは command / skill 側が SoT。
+
+---
+
 ## 関連
 
 - 観測: セッションログを集計して model 配分（Opus 偏重）を監視するツールを各自で持つとよい。

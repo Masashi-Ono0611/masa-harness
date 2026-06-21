@@ -9,7 +9,7 @@
 #   overwrite  … MASA_MODE=overwrite で明示 → タイムスタンプ backup を取ってから配置
 #
 # 設定ファイル（CLAUDE.md / settings.json / recurring-tasks.json）は個人化されやすいので、
-# overwrite を明示しない限り自動上書きしない。skills / rules / hooks は kit の更新を取り込む
+# overwrite を明示しない限り自動上書きしない。skills / rules / hooks / commands は kit の更新を取り込む
 # （変更されていれば backup を取ってから更新）。上書き前のファイルは消さず .bak-<日時> に退避する。
 #
 # 「全部 masashi 版」ではなく「良いとこだけ取り込む」なら、overwrite せず Claude Code で
@@ -40,19 +40,19 @@ sha() {  # sha <file> -> sha256（macOS/Linux 両対応）
   else shasum -a 256 "$1" | awk '{print $1}'; fi
 }
 
-# kit が管理する「ツリー配下ファイル」(rules/hooks/skills) を kit 相対パスで列挙
+# kit が管理する「ツリー配下ファイル」(rules/hooks/skills/commands) を kit 相対パスで列挙
 list_tree_files() {
-  ( cd "$KIT_DIR" && find rules hooks skills -type f 2>/dev/null \
+  ( cd "$KIT_DIR" && find rules hooks skills commands -type f 2>/dev/null \
       ! -name '.DS_Store' ! -name '*.pyc' ! -path '*/__pycache__/*' | sort )
 }
 
-# kit 相対パス → ~/.claude 相対 target に変換（rules/hooks/skills はそのまま、config は対応表）
+# kit 相対パス → ~/.claude 相対 target に変換（rules/hooks/skills/commands はそのまま、config は対応表）
 kit_to_target() {
   local k="$1" i
   for i in "${!CONFIG_SRC[@]}"; do
     if [ "$k" = "${CONFIG_SRC[$i]}" ]; then printf '%s\n' "${CONFIG_DST[$i]}"; return; fi
   done
-  printf '%s\n' "$k"   # rules/… hooks/… skills/… は同じ相対パス
+  printf '%s\n' "$k"   # rules/… hooks/… skills/… commands/… は同じ相対パス
 }
 
 # 既存 harness 検出
@@ -106,7 +106,7 @@ if [ "$WRITE" = no ]; then
       else echo "- 🟡 DIFF  \`${CONFIG_DST[$i]}\`（あなたの内容と違う＝あなたの編集を残します）"; fi
     done
     echo ""
-    echo "## skills / rules / hooks（NEW と DIFF のみ表示）"
+    echo "## skills / rules / hooks / commands（NEW と DIFF のみ表示）"
     echo ""
     while IFS= read -r k; do
       [ -z "$k" ] && continue
@@ -130,7 +130,7 @@ if [ "$WRITE" = no ]; then
 fi
 
 # ---- 書き込みモード（fresh / install / overwrite）---------------------------
-mkdir -p "$META_DIR" "${CLAUDE_DIR}/rules" "${CLAUDE_DIR}/hooks" "${CLAUDE_DIR}/skills" "${CLAUDE_DIR}/state"
+mkdir -p "$META_DIR" "${CLAUDE_DIR}/rules" "${CLAUDE_DIR}/hooks" "${CLAUDE_DIR}/skills" "${CLAUDE_DIR}/commands" "${CLAUDE_DIR}/state"
 
 n_new=0 n_upd=0 n_kept=0 n_bak=0 n_del=0
 NEW_MANIFEST="$(mktemp)"
@@ -157,7 +157,7 @@ for i in "${!CONFIG_SRC[@]}"; do
   printf '%s\n' "$rel" >> "$NEW_MANIFEST"
 done
 
-# skills / rules / hooks: kit-owned。更新を取り込む（違えば backup→更新）
+# skills / rules / hooks / commands: kit-owned。更新を取り込む（違えば backup→更新）
 while IFS= read -r k; do
   [ -z "$k" ] && continue
   rel="$(kit_to_target "$k")"; src="${KIT_DIR}/${k}"; dst="${CLAUDE_DIR}/${rel}"
@@ -181,7 +181,7 @@ QUARANTINE="${META_DIR}/removed-${STAMP}"
 if [ -f "$MANIFEST" ]; then
   while IFS= read -r oldrel; do
     [ -z "$oldrel" ] && continue
-    case "$oldrel" in rules/*|hooks/*|skills/*) ;; *) continue ;; esac
+    case "$oldrel" in rules/*|hooks/*|skills/*|commands/*) ;; *) continue ;; esac
     if ! grep -qxF "$oldrel" "$NEW_MANIFEST"; then
       target="${CLAUDE_DIR}/${oldrel}"
       if [ -e "$target" ]; then
@@ -190,8 +190,8 @@ if [ -f "$MANIFEST" ]; then
       fi
     fi
   done < "$MANIFEST"
-  # 退避で空になった skill/rule ディレクトリを刈る（トップの skills/rules/hooks 自体は残す）
-  for d in skills rules hooks; do
+  # 退避で空になった skill/rule ディレクトリを刈る（トップの skills/rules/hooks/commands 自体は残す）
+  for d in skills rules hooks commands; do
     find "${CLAUDE_DIR}/${d}" -mindepth 1 -type d -empty -delete 2>/dev/null || true
   done
 fi

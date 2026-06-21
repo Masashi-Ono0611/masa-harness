@@ -8,6 +8,19 @@
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-06-21
+
+外部モデルによるセルフ PR レビュー（multi-model review）を kit に同梱し、`commands/` を新カテゴリとして配布できるようにしたリリース。
+
+### 追加
+- **`commands/review/self-multi-model.md`** … PR 作成前にコードを第二モデル（Codex を primary、Antigravity CLI `agy` を fallback）と Claude の最低 2 つでレビューし、指摘を統合する `/review:self-multi-model` command。fallback 連鎖（Codex→Antigravity→Gemini bot→Claude）、大型 diff 向けの chunked `codex exec`、モデル名 SoT の一元管理を含む。外部CLIは任意で、無ければ Claude 単独で動く。
+- **`docs/multi-model-review.md`** … Codex CLI（`codex login`）と Antigravity CLI（`agy` の導入・Google Sign-In）の導入・認証・トラブルシュート手順。外部CLIが任意であること、fallback 連鎖、モデル名 SoT の更新方針を明記。
+- **`rules/agent-model-routing.md` に「外部モデル review のルーティング」節を追加** … review モデルを session 既定から decouple して明示固定する／tier より先に effort を疑う／別ベンダー CLI は Claude Code の更新で自動追従しないので腐る軸（モデル名）を1箇所に集約する、という判断軸（恒久）。腐る具体（モデル名・フラグ）は command の SoT ブロックに置く pointer 構成。
+
+### 変更
+- **`setup.sh` が `commands/` カテゴリを配布対象に追加** … これまで `rules` / `hooks` / `skills` のみだった kit-owned ツリーに `commands` を加え、`~/.claude/commands/` へ配置・更新・削除追従するようにした。
+- **`CLAUDE.md.template`** … 「Agent モデルルート」節を「Agent モデルルート / マルチモデル review」に拡張し、`/review:self-multi-model` と setup doc への pointer を1行追加。
+
 ## [1.4.0] - 2026-06-21
 
 配布 config の secret 読み取り防御を広げ、governance-gate の射程（sandbox ではない）を明文化したリリース。
