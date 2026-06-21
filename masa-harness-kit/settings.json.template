@@ -43,7 +43,20 @@
       "Read(**/secrets/**)",
       "Read(**/credentials*)",
       "Read(**/*.pem)",
-      "Read(**/id_rsa*)"
+      "Read(**/id_rsa*)",
+      "Read(**/*.key)",
+      "Read(**/*.p12)",
+      "Read(**/*.pfx)",
+      "Read(**/*.keystore)",
+      "Read(**/*.jks)",
+      "Read(**/.npmrc)",
+      "Read(**/.pgpass)",
+      "Read(**/kubeconfig)",
+      "Read(**/*.kubeconfig)",
+      "Read(**/.aws/**)",
+      "Read(**/.ssh/**)",
+      "Read(**/.netrc)",
+      "Read(**/service-account*.json)"
     ],
     "ask": [
       "Agent(model:opus)"
