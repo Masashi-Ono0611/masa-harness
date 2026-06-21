@@ -46,15 +46,18 @@ masa-harness-kit/
 │   ├── typescript.md              # 言語別（python/solidity 等は各自追加）
 │   ├── skill-template.md          # skill の書き方テンプレ
 │   ├── config-hygiene.md          # 環境保守の owner マップ
-│   └── agent-model-routing.md     # subagent のモデル選択指針
+│   └── agent-model-routing.md     # subagent のモデル選択 + 外部 review ルーティング指針
 ├── skills/                        # harness 改善系の汎用 skill（9 個）
 │   ├── ask-after-grep/ lesson-harvest/ oss-clone-security/ dev-machine-optimize/
 │   ├── claude-config-audit/ claude-skill-audit/ claude-stack-audit/ claude-stack-news/
 │   └── masa-harness-audit/        # kit の良い差分だけ選んで取り込む（選択的アップグレード）
+├── commands/
+│   └── review/self-multi-model.md # 外部モデル（Codex/Antigravity）+ Claude のセルフ PR レビュー
 ├── state/
 │   └── recurring-tasks.json.template   # 定期タスク・レジストリ（自己改善ループ3件入り）
 └── docs/
-    └── design.md                  # 設計思想の詳細（作者の全体像・読み物）
+    ├── design.md                  # 設計思想の詳細（作者の全体像・読み物）
+    └── multi-model-review.md      # 外部 review CLI（Codex/Antigravity）の導入・認証手順
 ```
 
 ## セットアップ
@@ -107,11 +110,12 @@ bash setup.sh
 | hook 4 個（governance-gate / audit-reminder / format / tool-leak-guard） | 音声 UI（VOICEVOX 等の通知 hook） |
 | 汎用 rule 4 個（typescript・skill-template・config-hygiene・agent-model-routing） | 外部接続（second brain / メッシュ VPN / 各種 MCP の実接続・トークン） |
 | harness 改善系の汎用 skill 9 個 | 個人ドメイン skill・過去の作業データ・auto-memory の中身 |
+| 外部モデル review command 1 個（self-multi-model）＋導入 doc | Codex / Antigravity のアカウント・認証（任意・各自で） |
 | 定期タスクの仕組み＋自己改善ループ3件 | 作者の定期タスク本体 |
 
 > skill のうち `lesson-harvest` / `claude-stack-*` / `ask-after-grep` は semantic 検索ツール（あれば）を併用する設計です。無くても主経路（grep / Explore agent）で成立します。
 >
-> `docs/design.md` に出てくる「69 skills」等の数値は**作者本番環境の例**で、この kit の同梱物（rules 4 / skills 9 / hooks 4）とは別物です。
+> `docs/design.md` に出てくる「69 skills」等の数値は**作者本番環境の例**で、この kit の同梱物（rules 4 / skills 9 / hooks 4 / commands 1）とは別物です。
 
 ## 学習サイクルが回る仕組み
 
@@ -150,7 +154,7 @@ bash setup.sh
 ## アンインストール
 
 - **元に戻す**: 上書きを伴う配置（`overwrite`）は既存を `~/.claude/<file>.bak-<日時>` に退避しています。退避ファイルを戻せば原状復帰します（例: `mv ~/.claude/CLAUDE.md.bak-20260619-120000 ~/.claude/CLAUDE.md`）。
-- **kit 由来物だけ消す**: このキットが設置したファイルは `~/.claude/.masa-harness/manifest.txt` に一覧があります。それを見て該当ファイル（hooks 4 / rules 4 / skills 9 / `state/recurring-tasks.json`）を削除し、`settings.json` の hooks セクションを外してください（または各 `.bak` から復元）。
+- **kit 由来物だけ消す**: このキットが設置したファイルは `~/.claude/.masa-harness/manifest.txt` に一覧があります。それを見て該当ファイル（hooks 4 / rules 4 / skills 9 / commands 1 / `state/recurring-tasks.json`）を削除し、`settings.json` の hooks セクションを外してください（または各 `.bak` から復元）。
 
 ## 変更履歴
 
