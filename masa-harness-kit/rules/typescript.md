@@ -1,7 +1,3 @@
----
-globs: ["**/*.ts", "**/*.tsx"]
----
-
 # TypeScript ルール
 
 - strict mode 有効を前提
