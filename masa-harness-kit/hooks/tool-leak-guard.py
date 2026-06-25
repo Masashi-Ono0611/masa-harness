@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stop hook: detect leaked tool-call markup and force an immediate self-correction.
+"""Stop hook: detect leaked tool-call markup and force self-correction (up to N retries).
 
 Background (2026-06-20):
   Claude Code has a known intermittent bug (anthropics/claude-code #64690 names
@@ -13,20 +13,42 @@ Background (2026-06-20):
   prose *before* the tool call, in long / many-turn contexts.
 
 What this hook does:
-  Fires on Stop. Reads the last assistant message from the transcript. If it contains
-  the leak signature (``<invoke>``+``<parameter>`` or ``<function_calls>`` as text)
-  AND that message produced zero real tool_use blocks, it returns decision=block with
-  the corrective workaround. This converts a dead "leaked" turn into one automatic
-  retry instead of leaving the session stuck on broken output.
+  Fires on Stop. Reads the transcript tail. If the most recent assistant message
+  carries the leak signature (``<invoke>``+``<parameter>`` or ``<function_calls>`` as
+  raw text) AND produced zero real tool_use blocks, it returns decision=block with the
+  corrective workaround. It will do so for UP TO ``MAX_RETRIES`` consecutive leaks in
+  the same incident, then give up so the session is never stuck in a block loop.
+
+Loop guard (why this does NOT rely on ``stop_hook_active``):
+  ``stop_hook_active`` is a boolean — it can only express "we already blocked once",
+  which caps retries at 1. To allow N retries we instead COUNT the leaked assistant
+  messages in the current incident:
+    * An "incident" is the run of assistant turns since the last GENUINE user prompt
+      (a real typed prompt, ``isMeta`` not True — NOT a tool_result, NOT a system-meta
+      message, NOT our own injected block reason). Every turn-end (clean or given-up)
+      returns control to the user, so a genuine prompt separates one incident from the next.
+    * Each re-leak appends exactly one leaked assistant message, so the count strictly
+      increases per retry and is hard-capped at MAX_RETRIES -> no infinite loop.
+    * Intermediate CLEAN tool_use turns inside a retry do NOT reset the count (we break
+      only on a genuine user prompt, not on a clean assistant turn), which prevents the
+      "partial success then re-leak" case from resetting the counter and looping.
+  Interaction with Claude Code's built-in recovery (confirmed from real transcripts):
+    Claude Code already auto-retries a malformed/leaked tool call *mid-turn* by injecting
+    a ``user`` message with ``isMeta=True`` and text "Your tool call was malformed and
+    could not be parsed". Those meta messages are interleaved between leaked assistant
+    turns, so they MUST be excluded from the genuine-prompt boundary (via the ``isMeta``
+    check) — otherwise they reset the counter every retry and the cap never bites. This
+    hook is the backstop for the case the built-in retry does NOT cover: the turn *ends*
+    while leaked (next entry is a ``system`` stop, not a malformed-retry meta message).
+  A second, generous absolute cap (``ABS_CAP`` leaked turns anywhere in the tail) is a
+  paranoia backstop against pathological transcript shapes.
 
 Safety:
-  - Honors ``stop_hook_active`` (never blocks twice in a row -> no infinite loop;
-    re-arms on each new user turn).
   - Any error / missing transcript -> exit 0 silently (never breaks the session).
   - Only stdout carries the decision JSON; diagnostics go to stderr.
 
 This is a SAFETY NET + auto-correct, not a root-cause fix. The real fix is upstream
-(keep Claude Code updated) plus the behavioral reflex (tool-call-first).
+(keep Claude Code updated) plus the behavioral reflex (tool-call-first, no preamble).
 """
 
 from __future__ import annotations
@@ -35,25 +57,37 @@ import json
 import re
 import sys
 
-# Read at most this many bytes from the end of the transcript. The final assistant
-# message (the one that may have leaked) is small; 1 MiB comfortably contains it
-# while keeping the hook fast on huge transcripts.
+# Block at most this many times for one leak incident, then give up (manual promote).
+MAX_RETRIES = 5
+
+# Absolute paranoia backstop: if this many leaked assistant turns appear anywhere in
+# the tail, stop blocking regardless of incident accounting. Far above MAX_RETRIES so
+# it never interferes with normal operation; only guards against pathological shapes.
+ABS_CAP = 12
+
+# Read at most this many bytes from the end of the transcript. Comfortably contains the
+# recent incident (a handful of small messages) while staying fast on huge transcripts.
 TAIL_BYTES = 1_048_576
 
-# Leak signatures. A properly parsed tool call never appears as text in the
-# transcript (it becomes a tool_use block), so these tag names showing up as text
-# in an assistant message with no tool_use is a leak by definition. Match with or
-# without the (possibly garbled) namespace prefix.
+# Leak signatures. A properly parsed tool call never appears as text in the transcript
+# (it becomes a tool_use block), so these tag names showing up as text in an assistant
+# message with no tool_use is a leak by definition. Match with or without the
+# (possibly garbled) namespace prefix.
 INVOKE_RE = re.compile(r"<(?:antml:)?invoke\b", re.IGNORECASE)
 PARAMETER_RE = re.compile(r"<(?:antml:)?parameter\b", re.IGNORECASE)
 FUNCTION_CALLS_RE = re.compile(r"<(?:antml:)?function_calls\b", re.IGNORECASE)
 
-# Markdown code spans, stripped before leak detection. Leaked tool-call markup is
-# never wrapped in a code fence / backticks, whereas prose that *explains or quotes*
-# the markup (like this very fix's write-up) almost always is. Stripping code spans
-# is the principled discriminator that keeps the hook from blocking honest discussion.
+# Markdown code spans, stripped before leak detection. Leaked tool-call markup is never
+# wrapped in a code fence / backticks, whereas prose that *explains or quotes* the
+# markup (like this very fix's write-up) almost always is. Stripping code spans is the
+# principled discriminator that keeps the hook from blocking honest discussion.
 FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
 INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
+
+# Distinctive substring of CORRECTION below. Used to recognize our OWN injected block
+# reason if Claude Code records it as a transcript entry, so it is never mistaken for a
+# genuine user prompt (which would reset the incident counter and risk a loop).
+MARKER = "tool-call markup のリーク"
 
 CORRECTION = (
     "ツール呼び出しが実行されず、素テキストとして出力されました"
@@ -80,33 +114,8 @@ def _read_tail(path: str) -> str:
     return text
 
 
-def _last_assistant_content(transcript_path: str) -> list | str | None:
-    """Return the message.content of the most recent assistant entry, or None."""
-    tail = _read_tail(transcript_path)
-    for line in reversed(tail.splitlines()):
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            entry = json.loads(line)
-        except (ValueError, TypeError):
-            continue
-        if not isinstance(entry, dict):
-            continue
-        msg = entry.get("message")
-        is_assistant = entry.get("type") == "assistant" or (
-            isinstance(msg, dict) and msg.get("role") == "assistant"
-        )
-        if not is_assistant:
-            continue
-        if isinstance(msg, dict):
-            return msg.get("content")
-        return entry.get("content")
-    return None
-
-
-def _is_leak(content: list | str | None) -> bool:
-    """True if the assistant message leaked tool-call markup with no real tool_use."""
+def _content_is_leak(content: list | str | None) -> bool:
+    """True if an assistant message leaked tool-call markup with no real tool_use."""
     if content is None:
         return False
 
@@ -145,6 +154,93 @@ def _is_leak(content: list | str | None) -> bool:
     return bool(INVOKE_RE.search(text) and PARAMETER_RE.search(text))
 
 
+def _is_genuine_user_prompt(msg: dict | None) -> bool:
+    """True only for a real typed user prompt (the caller also requires isMeta != True).
+
+    Excludes tool_result carrier messages and our own injected block reason, both of
+    which are user-role entries but must NOT count as an incident boundary. The
+    built-in malformed-retry meta message is excluded upstream by the isMeta check.
+    """
+    if not isinstance(msg, dict):
+        return False
+    content = msg.get("content")
+    if isinstance(content, str):
+        text = content
+    elif isinstance(content, list):
+        parts: list[str] = []
+        for block in content:
+            if isinstance(block, dict):
+                if block.get("type") == "tool_result":
+                    return False  # tool result carrier, not a user prompt
+                if block.get("type") == "text" or "text" in block:
+                    parts.append(str(block.get("text", "")))
+            elif isinstance(block, str):
+                parts.append(block)
+        text = "\n".join(parts)
+    else:
+        return False
+    if not text.strip():
+        return False
+    if MARKER in text:
+        return False  # our own injected block reason, not a genuine prompt
+    return True
+
+
+def _analyze(transcript_path: str) -> tuple[bool, int, int]:
+    """Walk the tail backward.
+
+    Returns (last_is_leak, incident_leaks, total_leaks):
+      - last_is_leak:   the most recent assistant turn leaked.
+      - incident_leaks: leaked assistant turns since the last genuine user prompt
+                        (including the current one); the retry counter.
+      - total_leaks:    leaked assistant turns anywhere in the tail (ABS_CAP guard).
+    """
+    tail = _read_tail(transcript_path)
+    last_is_leak: bool | None = None
+    incident_leaks = 0
+    total_leaks = 0
+    incident_open = True
+
+    for line in reversed(tail.splitlines()):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except (ValueError, TypeError):
+            continue
+        if not isinstance(entry, dict):
+            continue
+
+        msg = entry.get("message")
+        role = msg.get("role") if isinstance(msg, dict) else None
+        etype = entry.get("type")
+        is_assistant = etype == "assistant" or role == "assistant"
+        is_user = etype == "user" or role == "user"
+
+        if is_assistant:
+            content = msg.get("content") if isinstance(msg, dict) else entry.get("content")
+            leak = _content_is_leak(content)
+            if last_is_leak is None:
+                last_is_leak = leak
+            if leak:
+                total_leaks += 1
+                if incident_open:
+                    incident_leaks += 1
+            # A clean assistant turn does NOT close the incident: it may be an
+            # intermediate tool step of a retry that re-leaks later.
+        elif (
+            is_user
+            and incident_open
+            and entry.get("isMeta") is not True  # exclude built-in malformed-retry meta
+            and _is_genuine_user_prompt(msg)
+        ):
+            incident_open = False  # reached the prompt that started this incident
+        # else: tool_result / malformed-retry meta / injected block reason / system -> skip
+
+    return bool(last_is_leak), incident_leaks, total_leaks
+
+
 def main() -> int:
     raw = sys.stdin.read()
     try:
@@ -152,23 +248,40 @@ def main() -> int:
     except (ValueError, TypeError):
         return 0
 
-    if payload.get("stop_hook_active") is True:
-        # Already forcing a continuation; do not block again (loop guard).
-        return 0
-
     transcript_path = payload.get("transcript_path")
     if not transcript_path or not isinstance(transcript_path, str):
         return 0
 
     try:
-        content = _last_assistant_content(transcript_path)
+        last_is_leak, incident_leaks, total_leaks = _analyze(transcript_path)
     except OSError as e:
         print(f"tool-leak-guard: cannot read transcript: {e}", file=sys.stderr)
         return 0
 
-    if _is_leak(content):
-        print(json.dumps({"decision": "block", "reason": CORRECTION}))
+    if not last_is_leak:
+        return 0
 
+    if total_leaks > ABS_CAP:
+        print(
+            f"tool-leak-guard: leak persists ({total_leaks} total > ABS_CAP {ABS_CAP}); "
+            "giving up auto-retry, manual promote needed.",
+            file=sys.stderr,
+        )
+        return 0
+
+    if incident_leaks > MAX_RETRIES:
+        print(
+            f"tool-leak-guard: leak persisted through {MAX_RETRIES} retries; "
+            "giving up auto-retry, manual promote needed.",
+            file=sys.stderr,
+        )
+        return 0
+
+    print(
+        f"tool-leak-guard: leak detected, retry {incident_leaks}/{MAX_RETRIES}.",
+        file=sys.stderr,
+    )
+    print(json.dumps({"decision": "block", "reason": CORRECTION}))
     return 0
 
 
