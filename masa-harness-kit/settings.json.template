@@ -101,7 +101,8 @@
       {
         "matcher": "Edit|Write|MultiEdit",
         "hooks": [
-          { "type": "command", "command": "$HOME/.claude/hooks/governance-gate.py", "timeout": 5 }
+          { "type": "command", "command": "$HOME/.claude/hooks/governance-gate.py", "timeout": 5 },
+          { "type": "command", "command": "$HOME/.claude/hooks/worktree-trigger.py", "timeout": 5 }
         ]
       }
     ]

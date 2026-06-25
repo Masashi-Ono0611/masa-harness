@@ -13,6 +13,8 @@ PR を出す前に、コードを **第二モデル（Codex を primary、Antigr
 
 > **外部CLIは任意**。Codex も Antigravity も入っていなければ Claude 単独で動く（その旨をレポートに明記する）。Codex / Antigravity の導入・認証・トラブルシュートは [`docs/multi-model-review.md`](https://github.com/Masashi-Ono0611/masa-harness/blob/main/masa-harness-kit/docs/multi-model-review.md) を参照。
 >
+> **任意の追加レビュア**: マルチエージェント・オーケストレータ系（例: Sakana fugu）を第三の対戦相手として足してもよい。付加価値は「モデル多様性」でなく「オーケストレーション/合成 + 大 context」。ただし多くはサブスク/従量課金が要るので**必須ではない**＝無料チェーン（Codex/agy/Claude）で multi-model は成立する。足すなら raw API helper を `<skill-root>/bin/` に置き、鍵は環境変数（コミットしない）で渡す。
+>
 > **repo ごとに PR フロー全体を自動化したい場合**: 本 command を呼ぶ orchestrator skill を各 repo の `.claude/skills/<repo>-multi-model-review/` に作る（PR 作成・レビュー・マージまで一気通貫にしたいとき）。本 command 単体は「PR 作成前の第二モデル + Claude レビュー」だけを担う。
 
 ## モデルの優先順位
