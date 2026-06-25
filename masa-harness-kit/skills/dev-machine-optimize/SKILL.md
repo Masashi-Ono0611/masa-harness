@@ -222,7 +222,7 @@ vm_stat | awk '/Pages free/{f=$3}/Pages occupied by compressor/{c=$5}END{p=4096;
 |---|---|
 | `oss-clone-security` / `cso` | セキュリティ監査 (本 skill は容量/メモリ最適化、別軸) |
 | `claude-stack-audit` | Claude 設定健全性 (本 skill は OS リソース) |
-| `@.claude/rules/web-debug.md` | ブラウザ Profile / Cache の場所参照 |
+| ブラウザ Profile / Cache の場所 | OS 標準位置（macOS は `~/Library/Caches/<browser>`）。web-debug 系ルールを持っていれば参照 |
 
 ## Evidence Index
 
