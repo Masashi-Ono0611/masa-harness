@@ -25,8 +25,17 @@
 | `git` / `gh` | 一部 skill（stack-news の release 取得・各 skill の git 操作） | 該当 skill が空振り |
 | `ripgrep`(rg) / `gitleaks` / `trivy` | `oss-clone-security` のスキャン | その skill 使用時のみ要 |
 | `codex`（任意） | `claude-skill-audit` の Codex レビュー Step | その Step を skip |
+| `gstack`（任意・推奨コンパニオン） | 一部 skill が参照する `/cso`（継続セキュリティ監査・OWASP/STRIDE）等を提供 | cso 参照部だけ空振り（skill 本体は動く） |
 
 **OS**: macOS を主に想定。`date` は BSD/GNU 両対応済なので Linux でも動く。formatter 系（ruff/prettier 等）は各言語を使うときに各自導入。
+
+**gstack（任意・推奨）**: 本 kit のいくつかの skill は、継続セキュリティ監査 `/cso` 等を [`gstack`](https://github.com/garrytan/gstack)（Garry Tan 作・MIT・OSS）の skill 前提で「直列の相方」として参照しています。kit は gstack を**同梱しません**（third-party の再配布をしない）が、フルに使うなら各自で導入できます:
+
+```bash
+git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack && cd ~/.claude/skills/gstack && ./setup
+```
+
+無くても各 skill 本体は動きます（cso 参照部分だけ空振り）。本 kit の skill 群（dev-machine-optimize / claude-* audit / oss-clone-security / vuln-scan 等）は gstack とは独立に作者が組んだもので、gstack の置き換えでなく**補完**の位置づけです。
 
 ## 同梱物
 
