@@ -67,8 +67,12 @@
 - SessionStart hook（`audit-reminder.sh`）が due/overdue を通知。タスク追加は entry を1行足すだけ、完了したら `last_run` を更新
 
 ## 並列開発
-- 同一リポで2件以上の並行作業は `git worktree add` で物理分離（branch 切替で未コミット変更が混線するのを防ぐ）
+- **保護ブランチ（main/master/staging/trunk 等＋ origin/HEAD 由来の検出 default）上で作業着手したら、1 件でも `git worktree add` で物理分離するのが全 project 既定（worktree-first reflex）**（branch 切替で未コミット変更が混線・PR 管理がカオス化。**「2 件以上の並行時だけ」ではなく最初の 1 件から切る**＝後から feature へ移し替える二度手間・main 直 commit を防ぐ。harness の "on default branch, branch first" を物理層で担保する＝§共通ルールの直プッシュ禁止と同根）
 - 異なるリポ間の並行は worktree 不要（ディレクトリ分離済み）
+- **フロー（型）は skill に持つ＝汎用は `worktree-pr-flow`（骨格・新規 repo の既定フロー）／repo 固有は各 `<repo>-pr-flow`**。CLAUDE.md は reflex のみ・手順は skill 側（Thin Harness, Fat Skills）
+- 起動: `git worktree add ../<repo>-<feature> -b feat/<feature> origin/<base>` または `claude -w <feature>` (worktree + 専用セッション、`--tmux` で pane 並列)
+- 検出（L1 強制＝「勝手に起きる／デフォルト化」を担保する層）: `~/.claude/hooks/worktree-trigger.py` が**保護ブランチ上の Edit/Write 着手で worktree を提案**（PreToolUse で 1回/repo/session ブロック）。継続作業 / 設定の軽微編集は retry でスルー、独立作業なら worktree を切る。**skill は呼ばれないと発火しないので、デフォルト化の強制は hook が担い、フローの中身は skill が担う**（強制レイヤー × フロー定義レイヤーの分担）
+- **worktree は gitignore 対象（`.env` 等の secrets/config・`.venv`・`node_modules` 等）を引き継がない**（git管理外のため空で生える）。backend をローカル実行/テスト/挙動検証するとき: `.venv`/`node_modules` は `uv run`/`pnpm install` が自動再生成するので放置でよいが、**`.env`（secrets）は再生成されない → 「worktree に env が無い」で検証を諦めず、メイン checkout の `.env` を参照する**（`uv run --env-file <main-checkout>/…/.env …` 等・**secret 値はシェル引数に出さない**＝ファイル内で解決）
 
 ## 3層運用（IC / DRI / AI Founder）
 - **IC（実行）**: Agent に任せる実装・調査・コマンド。subagent fan-out と deterministic tool で量をこなす

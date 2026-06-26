@@ -1,6 +1,6 @@
-CLAUDE.md.template	~/.claude/CLAUDE.md	generalized	6d68f4a479b419eaf254c841f71c6673484d438f27abc0e694c7fd240d114225
-settings.json.template	~/.claude/settings.json	generalized	fc63e98f8e62c31d34bbb735b88b4463da86bc5873a067d90f12e622b3a09bf0
-state/recurring-tasks.json.template	~/.claude/state/recurring-tasks.json	generalized	1e46919b8eaf59e6931a285b2e795f2a26a770ee82539cba8014acd898b4aeff
+CLAUDE.md.template	~/.claude/CLAUDE.md	generalized	72d9c7388eec31b800b4cdf5ad43f9972644134e73e7620551f3c314a51372d9
+settings.json.template	~/.claude/settings.json	generalized	c5ecba3c89bdf299506c78fbb9f1e37f332a50a219c232c9f5f7d99e8740ed1a
+state/recurring-tasks.json.template	~/.claude/state/recurring-tasks.json	generalized	b8f65182557df66cf0a92a32b875332db3775d0771095c04d256f8a4dc10ba21
 rules/typescript.md	~/.claude/rules/typescript.md	verbatim	4c85731f1eb9d05e781b9581aea4b4477f4f68f291e7056d90bbd3aeefd891a5
 rules/skill-template.md	~/.claude/rules/skill-template.md	generalized	2e3e9eab4856e6d592ff757158bfd661fda758a9b86830038d4730270067a774
 rules/agent-model-routing.md	~/.claude/rules/agent-model-routing.md	generalized	bee4dcfe67a21eaaf69d271a32a476ed2ac6659fc6ecc516dd503bd87c20f002
@@ -17,4 +17,6 @@ skills/claude-config-audit/SKILL.md	~/Developer/.claude/skills/claude-config-aud
 skills/claude-skill-audit/SKILL.md	~/Developer/.claude/skills/claude-skill-audit/SKILL.md	generalized	b52a53f7799b5eb9fdf8f7c9a6156ae01ae49c2c828a905c1ca9f39212fbcaab
 skills/claude-stack-audit/SKILL.md	~/Developer/.claude/skills/claude-stack-audit/SKILL.md	generalized	740d3f830cd9a1157eef8dd2eabb63e111c5502aad647dbd41d272e16c5aeb8e
 skills/claude-stack-news/SKILL.md	~/Developer/.claude/skills/claude-stack-news/SKILL.md	generalized	cbf0d07db74b23e6e887158cba918a4dcebe6e96fcd3e436da2e49bc1461403c
-commands/review/self-multi-model.md	~/Developer/.claude/commands/review/self-multi-model.md	generalized	e3646c3418fd4fb6025582a3013b19ebf25a7f69392d6407e668c9f909d9335e
+commands/review/self-multi-model.md	~/Developer/.claude/commands/review/self-multi-model.md	generalized	75721503489a4a65315cd69448400181363817628558bbd3ade1de88f2543f53
+hooks/worktree-trigger.py	~/Developer/.claude/hooks/worktree-trigger.py	verbatim	b4810f1ed42d7699ae9dcf3ce151e3e44211e1d16382dda828f46fd291b7b881
+skills/worktree-pr-flow/SKILL.md	~/Developer/.claude/skills/worktree-pr-flow/SKILL.md	generalized	f786a56554f0e23c98b8f29a8a573e9c76cc5a7e2f490a2233f9c74319b2398b

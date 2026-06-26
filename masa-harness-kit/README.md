@@ -50,18 +50,25 @@ masa-harness-kit/
 │   ├── governance-gate.py         # PreToolUse ガバナンス gate（BLOCK/LOG/ALLOW）
 │   ├── audit-reminder.sh          # SessionStart: 定期タスクの due 通知（BSD/GNU date 両対応）
 │   ├── post-edit-format.sh        # PostToolUse: 拡張子ごとに整形（ruff/prettier/gofmt 等・無ければ no-op）
-│   └── tool-leak-guard.py         # Stop: 漏れた tool-call markup を検出し1回だけ出し直させる（Opus 4.8 既知バグ対策）
+│   ├── tool-leak-guard.py         # Stop: 漏れた tool-call markup を検出し1回だけ出し直させる（Opus 4.8 既知バグ対策）
+│   └── worktree-trigger.py        # PreToolUse: 保護ブランチ上で Edit/Write 着手したら worktree を提案（worktree-first 強制）
 ├── rules/
 │   ├── typescript.md              # 言語別（python/solidity 等は各自追加）
 │   ├── skill-template.md          # skill の書き方テンプレ
 │   ├── config-hygiene.md          # 環境保守の owner マップ
 │   └── agent-model-routing.md     # subagent のモデル選択 + 外部 review ルーティング指針
-├── skills/                        # harness 改善系の汎用 skill（9 個）
+├── skills/                        # harness 改善系の汎用 skill（11 個）
 │   ├── ask-after-grep/ lesson-harvest/ oss-clone-security/ dev-machine-optimize/
 │   ├── claude-config-audit/ claude-skill-audit/ claude-stack-audit/ claude-stack-news/
-│   └── masa-harness-audit/        # kit の良い差分だけ選んで取り込む（選択的アップグレード）
-├── commands/
-│   └── review/self-multi-model.md # 外部モデル（Codex/Antigravity）+ Claude のセルフ PR レビュー
+│   ├── vuln-scan/                 # 全リポの依存/ランタイム/コンテナ CVE + EOL を継続診断（Trivy + endoflife.date）
+│   ├── masa-harness-audit/        # kit の良い差分だけ選んで取り込む（選択的アップグレード）
+│   └── worktree-pr-flow/          # 保護ブランチ上の worktree-first PR フロー骨格（worktree-trigger hook とペア）
+├── commands/                      # スラッシュ起動の汎用ワークフロー（5 個）
+│   ├── review/self-multi-model.md # 外部モデル（Codex/Antigravity）+ Claude のセルフ PR レビュー
+│   ├── review/pr-review.md        # 指定 PR のコードレビュー
+│   ├── gh/commit-push-pr.md       # commit → push → PR を一括
+│   ├── gh/fix-review.md           # 現在ブランチの PR レビュー指摘を収集・修正
+│   └── debug/investigate.md       # エラー/バグの原因を構造化して調査
 ├── state/
 │   └── recurring-tasks.json.template   # 定期タスク・レジストリ（自己改善ループ3件入り）
 └── docs/
@@ -116,15 +123,15 @@ bash setup.sh
 | 含む | 含まない（各自で） |
 |---|---|
 | 設計思想・Karpathy 4 原則・CLAUDE.md 骨格 | 作者の org / プロジェクト構成・社名・メール |
-| hook 4 個（governance-gate / audit-reminder / format / tool-leak-guard） | 音声 UI（VOICEVOX 等の通知 hook） |
+| hook 5 個（governance-gate / audit-reminder / format / tool-leak-guard / worktree-trigger） | 音声 UI（VOICEVOX 等の通知 hook） |
 | 汎用 rule 4 個（typescript・skill-template・config-hygiene・agent-model-routing） | 外部接続（second brain / メッシュ VPN / 各種 MCP の実接続・トークン） |
-| harness 改善系の汎用 skill 9 個 | 個人ドメイン skill・過去の作業データ・auto-memory の中身 |
-| 外部モデル review command 1 個（self-multi-model）＋導入 doc | Codex / Antigravity のアカウント・認証（任意・各自で） |
+| harness 改善系の汎用 skill 11 個 | 個人ドメイン skill・過去の作業データ・auto-memory の中身 |
+| 汎用ワークフロー command 5 個（self-multi-model / pr-review / commit-push-pr / fix-review / investigate）＋導入 doc | Codex / Antigravity のアカウント・認証（任意・各自で） |
 | 定期タスクの仕組み＋自己改善ループ3件 | 作者の定期タスク本体 |
 
 > skill のうち `lesson-harvest` / `claude-stack-*` / `ask-after-grep` は semantic 検索ツール（あれば）を併用する設計です。無くても主経路（grep / Explore agent）で成立します。
 >
-> `docs/design.md` に出てくる「69 skills」等の数値は**作者本番環境の例**で、この kit の同梱物（rules 4 / skills 9 / hooks 4 / commands 1）とは別物です。
+> `docs/design.md` に出てくる「69 skills」等の数値は**作者本番環境の例**で、この kit の同梱物（rules 4 / skills 11 / hooks 5 / commands 5）とは別物です。
 
 ## 学習サイクルが回る仕組み
 
@@ -163,7 +170,7 @@ bash setup.sh
 ## アンインストール
 
 - **元に戻す**: 上書きを伴う配置（`overwrite`）は既存を `~/.claude/<file>.bak-<日時>` に退避しています。退避ファイルを戻せば原状復帰します（例: `mv ~/.claude/CLAUDE.md.bak-20260619-120000 ~/.claude/CLAUDE.md`）。
-- **kit 由来物だけ消す**: このキットが設置したファイルは `~/.claude/.masa-harness/manifest.txt` に一覧があります。それを見て該当ファイル（hooks 4 / rules 4 / skills 9 / commands 1 / `state/recurring-tasks.json`）を削除し、`settings.json` の hooks セクションを外してください（または各 `.bak` から復元）。
+- **kit 由来物だけ消す**: このキットが設置したファイルは `~/.claude/.masa-harness/manifest.txt` に一覧があります。それを見て該当ファイル（hooks 5 / rules 4 / skills 11 / commands 5 / `state/recurring-tasks.json`）を削除し、`settings.json` の hooks セクションを外してください（または各 `.bak` から復元）。
 
 ## 変更履歴
 
