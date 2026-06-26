@@ -10,9 +10,13 @@
 set -euo pipefail
 
 MAINT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$MAINT_DIR/.." && pwd)"
 MANIFEST="$MAINT_DIR/kit-manifest.tsv"
-KIT_DIR="$(cd "$MAINT_DIR/../masa-harness-kit" && pwd)"
+KIT_DIR="$MAINT_DIR/../masa-harness-kit"
+KIT_DIR="$(cd "$KIT_DIR" && pwd)"
 TARBALL="$MAINT_DIR/../masa-harness-kit.tar.gz"
+# 配布物（VERSION 対象）の相対パス prefix と、版管理メタ（版差分判定から除外）。
+KIT_REL="masa-harness-kit"
 
 # 配布物（kit/）に混入してはいけない個人情報パターン（sanitize ガード）。
 # このファイルは公開リポに入るので、ここには「作者本人の識別子」だけを書く。
@@ -120,12 +124,90 @@ cmd_pack() {
   echo "--- contents (top) ---"; tar tzf "$TARBALL" | head -8
 }
 
+# 未リリースの配布物変更を検出する＝リリース漏れ防止。最新タグ vX.Y.Z 以降に配布物
+# （VERSION/CHANGELOG を除く masa-harness-kit/ 配下）が変わったのに VERSION が据え置きなら
+# 「マージ済だがリリースされていない」漏れ。--strict で漏れ時に exit 1（CI gate 用）。
+cmd_release_status() {
+  local strict=0; [ "${1:-}" = "--strict" ] && strict=1
+  local latest_tag latest_ver ver changed
+  latest_tag="$(git -C "$REPO_ROOT" describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
+  if [ ! -f "$KIT_DIR/VERSION" ]; then echo "release-status: VERSION 不在"; return 1; fi
+  ver="$(tr -d '[:space:]' < "$KIT_DIR/VERSION")"
+  if [ -z "$latest_tag" ]; then
+    echo "release-status: タグ無し（初回リリース前）— skip"; return 0
+  fi
+  latest_ver="${latest_tag#v}"
+  changed="$(git -C "$REPO_ROOT" diff --name-only "$latest_tag"..HEAD -- "$KIT_REL/" \
+            ":(exclude)$KIT_REL/VERSION" ":(exclude)$KIT_REL/CHANGELOG.md" 2>/dev/null | wc -l | tr -d ' ')"
+  if [ "$changed" -eq 0 ]; then
+    echo "release-status: clean（${latest_tag} 以降に配布物変更なし）"; return 0
+  fi
+  if [ "$ver" = "$latest_ver" ]; then
+    echo "release-status: LEAK — ${latest_tag} 以降に配布物 ${changed} 件の変更があるのに VERSION 据え置き（v${ver}）"
+    echo "  未リリースの変更があります。/masa-harness-release で semver 判定→VERSION/CHANGELOG→tag を切ってください。"
+    git -C "$REPO_ROOT" diff --name-only "$latest_tag"..HEAD -- "$KIT_REL/" \
+      ":(exclude)$KIT_REL/VERSION" ":(exclude)$KIT_REL/CHANGELOG.md" 2>/dev/null | sed 's/^/    /'
+    [ "$strict" = 1 ] && return 1 || return 0
+  fi
+  echo "release-status: in-progress — VERSION は v${ver} に bump 済（latest tag ${latest_tag}）。tag 未 push なら publish を完了してください。"
+  return 0
+}
+
+# README と実配布物の整合を検証する＝stale tree 防止。配布物（skills/commands/hooks/rules）の
+# basename が README に列挙されているか、実数が README に出現するかを突き合わせる。
+# --strict で不整合時に exit 1（CI gate 用）。
+# missing pass と count を同一定義で出すための列挙ヘルパ（macOS/Linux 両対応＝GNU 専用の
+# find -printf を使わず glob + basename）。各カテゴリの「README に出るべき token」を1行ずつ吐く
+# （skills=末尾 / 付き dir 名で境界化、commands/hooks/rules=ファイル名＝拡張子が右境界）。
+_kit_list() {  # _kit_list <category>
+  local f
+  case "$1" in
+    skills)   for f in "$KIT_DIR"/skills/*/;   do [ -d "$f" ] && printf '%s/\n' "$(basename "$f")"; done ;;
+    commands) find "$KIT_DIR/commands" -type f -name '*.md' 2>/dev/null | while IFS= read -r f; do basename "$f"; done ;;
+    hooks)    for f in "$KIT_DIR"/hooks/*.py "$KIT_DIR"/hooks/*.sh; do [ -f "$f" ] && basename "$f"; done ;;
+    rules)    for f in "$KIT_DIR"/rules/*.md;  do [ -f "$f" ] && basename "$f"; done ;;
+  esac
+}
+
+cmd_doc_check() {
+  local strict=0; [ "${1:-}" = "--strict" ] && strict=1
+  local readme="$KIT_DIR/README.md" fail=0 cat tok
+  local -a missing=()
+  if [ ! -f "$readme" ]; then echo "doc-check: README.md 不在"; return 1; fi
+  # (1) 列挙チェック（hard gate）: 各配布物の token が README に出現するか。
+  #     grep -F で固定文字列照合＝正規表現メタ文字や `foo`⊂`foobar` の誤判定を排除。
+  #     skills は token に末尾 '/' を含めて境界化、commands/hooks/rules は拡張子が右境界。
+  #     missing pass と下の count は同一述語（_kit_list）由来＝定義ズレを作らない。
+  for cat in skills commands hooks rules; do
+    while IFS= read -r tok; do
+      [ -z "$tok" ] && continue
+      grep -Fq -- "$tok" "$readme" || missing+=("$cat: $tok")
+    done < <(_kit_list "$cat")
+  done
+  if [ "${#missing[@]}" -gt 0 ]; then
+    echo "doc-check: README に未記載の配布物:"; printf '    %s\n' "${missing[@]}"; fail=1
+  fi
+  # (2) 実数の報告（informational）: README の散文カウント（「11 個」等）は phrasing 依存で
+  #     脆いため hard gate にしない。実数を出し、人/レビューが prose と突き合わせる。
+  #     列挙チェック (1) が「全ファイルが README に載っている」ことは既に保証する。
+  local sk cm hk rl
+  sk=$(_kit_list skills   | wc -l | tr -d ' ')
+  cm=$(_kit_list commands | wc -l | tr -d ' ')
+  hk=$(_kit_list hooks    | wc -l | tr -d ' ')
+  rl=$(_kit_list rules    | wc -l | tr -d ' ')
+  echo "doc-check: actual skills=$sk commands=$cm hooks=$hk rules=$rl"
+  if [ "$fail" = 0 ]; then echo "doc-check: clean"; return 0; fi
+  [ "$strict" = 1 ] && return 1 || return 0
+}
+
 case "${1:-check}" in
-  check)    cmd_check ;;
-  sanitize) sanitize_guard && echo "sanitize: clean" ;;  # CI gate 用（本体パス不要）
-  apply)    cmd_apply ;;
-  diff)     shift; cmd_diff "${1:-}" ;;
-  stamp)    shift; cmd_stamp "${1:-}" ;;
-  pack)     cmd_pack ;;
-  *) echo "usage: kit-sync.sh {check|sanitize|apply|diff <kit_rel>|stamp <kit_rel|--all>|pack}"; exit 1 ;;
+  check)          cmd_check ;;
+  sanitize)       sanitize_guard && echo "sanitize: clean" ;;  # CI gate 用（本体パス不要）
+  apply)          cmd_apply ;;
+  diff)           shift; cmd_diff "${1:-}" ;;
+  stamp)          shift; cmd_stamp "${1:-}" ;;
+  pack)           cmd_pack ;;
+  release-status) shift; cmd_release_status "${1:-}" ;;  # 未リリース配布物変更の検出（--strict で CI fail）
+  doc-check)      shift; cmd_doc_check "${1:-}" ;;        # README ↔ 配布物 整合（--strict で CI fail）
+  *) echo "usage: kit-sync.sh {check|sanitize|apply|diff <kit_rel>|stamp <kit_rel|--all>|pack|release-status [--strict]|doc-check [--strict]}"; exit 1 ;;
 esac
