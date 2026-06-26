@@ -8,6 +8,22 @@
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-06-26
+
+保護ブランチ上の作業を worktree に物理分離する「worktree-first」を L1 強制 hook ＋ 汎用フロー skill のペアで同梱し、あわせて継続セキュリティ診断 skill と汎用ワークフロー command 群を kit に加えたリリース。skill は「呼ばれないと発火しない」ため、デフォルト化の強制は hook、フローの中身は skill が担う分担。
+
+### 追加
+- **`hooks/worktree-trigger.py`** … 保護ブランチ（main/master/staging/trunk 等＋ `origin/HEAD` 由来の検出 default）上で Edit/Write に着手すると、1回/repo/session だけブロックして worktree 作成を提案する PreToolUse hook。独立作業なら `git worktree add` を促し、継続作業・設定の軽微編集なら retry でスルーする。linked worktree 内・feature ブランチ・detached HEAD は素通し。同梱 hook は 4 → 5 個に。
+- **`skills/worktree-pr-flow/SKILL.md`** … 保護ブランチ着手時の「worktree 作成 → 実装 → 検証 → マルチモデルレビュー → PR → cleanup」を 6 段で回す repo 非依存の汎用フロー骨格。repo 固有事情が溜まったら `<repo>-pr-flow` を新設して卒業する設計。worktree-trigger hook とペアで機能する。
+- **`skills/vuln-scan/`** … 全リポを定期診断し「依存（npm）CVE」+「ランタイム/コンテナ CVE」+「EOL ランタイム」を一括検出して『対応要 / 監視 / 無視』にトリアージする継続セキュリティ診断 skill。Trivy 1 本（＋ endoflife.date）で、Dependabot/npm audit が見られないランタイム本体の CVE（Node/Python/Go コア）まで捕捉する。clone 瞬間の `oss-clone-security` とは責務が別（継続・全リポ・ランタイム+EOL）。
+- **汎用ワークフロー command 4 個**（`commands/` を review 1 個から 5 個に拡張）… `gh/commit-push-pr.md`（commit → push → PR を一括）/ `gh/fix-review.md`（現在ブランチの PR レビュー指摘を収集・修正）/ `review/pr-review.md`（指定 PR のコードレビュー）/ `debug/investigate.md`（エラー/バグの原因を構造化して調査）。`setup.sh` は `commands/**` を glob 配置するため自動で入る。
+
+### 変更
+- **`CLAUDE.md.template` の「並列開発」節を worktree-first reflex に更新** … 「同一リポで2件以上の並行作業」から「保護ブランチ上で着手したら1件でも worktree で物理分離」へ既定を引き上げ。強制 hook（L1）とフロー skill の分担、`.env` 等 gitignore 対象を worktree が引き継がない点（メイン checkout 参照）を明記。
+- **`settings.json.template` に worktree-trigger を配線** … `Edit|Write|MultiEdit` matcher に governance-gate と並べて PreToolUse 登録。kit 利用者の環境でも実際に発火するようにした。
+- **`hooks/tool-leak-guard.py` を本体最新と同期** … tool-call markup リーク検出の判定・誤検知抑制を改善。
+- **rules / pointer の整合取り直し** … `rules/agent-model-routing.md` 等のマルチモデル review 記述を本体最新に同期。dangling だった参照を解消し、web デバッグ系の pointer を gstack 推奨に汎用化。
+
 ## [1.5.0] - 2026-06-21
 
 外部モデルによるセルフ PR レビュー（multi-model review）を kit に同梱し、`commands/` を新カテゴリとして配布できるようにしたリリース。
