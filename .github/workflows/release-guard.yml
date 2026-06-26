@@ -1,0 +1,36 @@
+name: release-guard
+
+# リリース漏れ・README stale を構造的に防ぐガード。
+#   - doc-check    : PR / push で README と実配布物（skills/commands/hooks/rules）の整合を検証。
+#                    PR の required status check にすれば、stale な README の merge をブロックできる。
+#   - release-status: push (main) で「最新タグ以降に配布物が変わったのに VERSION 据え置き」=
+#                    マージ済みだが未リリースの漏れを検出して fail（main に赤 X が残る＝忘れない）。
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  doc-check:
+    name: doc-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: README ↔ 配布物 整合（stale tree 防止）
+        run: bash .maint/kit-sync.sh doc-check --strict
+
+  release-status:
+    name: release-status
+    # PR では「タグ以降に配布物変更あり」は当然（これから release する差分）なので push のみ。
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # git describe / tag..HEAD 比較に全履歴＋タグが要る
+      - name: 未リリース配布物変更の検出（リリース漏れ防止）
+        run: bash .maint/kit-sync.sh release-status --strict

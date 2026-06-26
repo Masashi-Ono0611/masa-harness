@@ -25,6 +25,10 @@
 | `kit-sync.sh diff <kit_rel>` | その entry の 本体 vs kit を diff（汎用化を保って手反映する補助） |
 | `kit-sync.sh stamp <kit_rel \| --all>` | baseline を本体現 sha に更新（generalized を手反映し終えた後に叩いて「追従済み」を確定） |
 | `kit-sync.sh pack` | `masa-harness-kit/` を `masa-harness-kit.tar.gz` に再生成（`*.bak-*` / `__pycache__` / `.DS_Store` 除外） |
+| `kit-sync.sh release-status [--strict]` | 最新タグ `vX.Y.Z` 以降に配布物（`masa-harness-kit/` 配下、VERSION/CHANGELOG を除く）が変わったのに VERSION 据え置きなら **未リリースの漏れ**として列挙。`--strict` で漏れ時 exit 1（CI gate 用） |
+| `kit-sync.sh doc-check [--strict]` | README と実配布物（skills/commands/hooks/rules）の整合を検証＝**stale tree 防止**。**hard gate=各配布物名が README に列挙されているか**（`grep -F` 固定文字列＋ skills は末尾 `/` で境界化）。実数は informational に出力（散文カウントは phrasing 依存で脆いため gate にしない）。`--strict` で未記載時 exit 1（CI gate 用） |
+
+> `release-status` / `doc-check` は `release-guard.yml`（PR/push）が `--strict` で呼ぶ＝**リリース漏れ・README stale を構造的に防ぐ**。`doc-check` を PR の required status check にすれば stale な README の merge をブロックできる。
 
 ## 標準ワークフロー（本体を直したとき）
 
