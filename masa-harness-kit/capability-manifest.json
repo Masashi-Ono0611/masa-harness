@@ -1,0 +1,171 @@
+{
+  "schema": "masa-harness/capability-manifest@1",
+  "version": "1.7.0",
+  "description": "machine-readable owner map — どの component が何の capability を owner するか。config-hygiene.md の owner マップ（散文）の機械可読 projection。discovery（『何が X を担うか』）/ MECE 検証（重複・カバー漏れ）/ kit-sync の capability-layer drift 検出に使う。SoT は各 rule（policy_ref）と config-hygiene.md。",
+  "philosophy": "Thin Harness, Fat Skills — 知能=skill / 実行=hook / 記憶=memory / 規約=rule。harness は薄く、能力は component に宿す。",
+  "roles": {
+    "guard": "副作用前に BLOCK/LOG/ALLOW で執行する deterministic 防御（hook）",
+    "automation": "判断を挟まない決定論的な自動処理（hook）",
+    "reflex": "毎回効く軽量な行動規律（質問前 grep 等）",
+    "audit": "基準と差分照合してレポート（健康診断・スコア化）",
+    "collect": "固定 source を定点 sweep して digest 化（読み取り専用）",
+    "decide": "収集物起点で採否を判断（提案まで・承認後に反映）",
+    "augment": "繰り返し指摘を規則として追記（足す係）",
+    "security": "supply-chain / CVE / EOL の防衛・検出",
+    "lifecycle": "実装→検証→レビュー→PR→cleanup のフロー骨格",
+    "ops": "マシン/環境の保守",
+    "kit-meta": "kit 配布物自体のメタ運用"
+  },
+  "capabilities": [
+    {
+      "id": "durable-state-mutation-guard",
+      "owns": "durable-state mutation（branch protection 変更・global pkg install・system mutation・機微 file 編集等）の暴発を BLOCK/LOG/ALLOW で執行",
+      "kind": "hook",
+      "component": "hooks/governance-gate.py",
+      "role": "guard",
+      "boundary": "Bash の write-primitive や機微 read は素通し（sandbox ではない）。秘密の最終防御は運用規律側。",
+      "policy_ref": ["rules/config-hygiene.md"]
+    },
+    {
+      "id": "tool-call-leak-guard",
+      "owns": "tool call の素テキストリーク（<invoke>/<parameter> の生描画）を事後に差し戻す",
+      "kind": "hook",
+      "component": "hooks/tool-leak-guard.py",
+      "role": "guard",
+      "boundary": "根治でない（出し方＝prose 前置きを疑うのが本筋）。",
+      "policy_ref": []
+    },
+    {
+      "id": "protected-branch-worktree-trigger",
+      "owns": "保護ブランチ上の Edit/Write 着手を検知して worktree 分離を提案（1回/repo/session ブロック）",
+      "kind": "hook",
+      "component": "hooks/worktree-trigger.py",
+      "role": "guard",
+      "boundary": "フローの中身は worktree-pr-flow skill が担う（強制レイヤー × フロー定義レイヤーの分担）。",
+      "policy_ref": []
+    },
+    {
+      "id": "post-edit-format",
+      "owns": "Edit/Write 後のフォーマット自動適用",
+      "kind": "hook",
+      "component": "hooks/post-edit-format.sh",
+      "role": "automation",
+      "boundary": "",
+      "policy_ref": []
+    },
+    {
+      "id": "recurring-due-notify",
+      "owns": "recurring-tasks.json の due/overdue を SessionStart で context 通知",
+      "kind": "hook",
+      "component": "hooks/audit-reminder.sh",
+      "role": "automation",
+      "boundary": "タスク定義は state/recurring-tasks.json が SoT。",
+      "policy_ref": []
+    },
+    {
+      "id": "docs-grep-before-ask",
+      "owns": "AI に質問する前に docs/CLAUDE.md/AGENTS.md を grep する reflex",
+      "kind": "skill",
+      "component": "skills/ask-after-grep",
+      "role": "reflex",
+      "boundary": "",
+      "policy_ref": []
+    },
+    {
+      "id": "config-health-audit",
+      "owns": "settings.json / hooks / rules / CLAUDE.md 本文の構成健全性をベスプラ照合でスコア化、および rules/CLAUDE.md 本文の剪定（削る係）",
+      "kind": "skill",
+      "component": "skills/claude-config-audit",
+      "role": "audit",
+      "boundary": "skills/commands=claude-skill-audit / memory=memory-cleanup(非同梱) / 規則の追加=lesson-harvest。",
+      "policy_ref": ["rules/config-hygiene.md"]
+    },
+    {
+      "id": "skill-registry-audit",
+      "owns": "個人 skill の template 準拠・行数 cap・anti-pattern・registry 横断 DRY+MECE・sprawl(8-12)・commands 棚卸し",
+      "kind": "skill",
+      "component": "skills/claude-skill-audit",
+      "role": "audit",
+      "boundary": "settings/hooks/rules=claude-config-audit / memory=memory-cleanup(非同梱)。",
+      "policy_ref": ["rules/skill-template.md", "rules/config-hygiene.md"]
+    },
+    {
+      "id": "ecosystem-frontier-digest",
+      "owns": "マルチモデル AI-agent-build stack（Claude 中心+Codex/Gemini/Fugu/agent framework/MCP/新モデル）の週次フロンティア digest を固定 source から収集（読み取り専用・設計示唆付き）",
+      "kind": "skill",
+      "component": "skills/claude-stack-news",
+      "role": "collect",
+      "boundary": "formal な採用判断は claude-stack-audit（本 skill は収集のみ）。",
+      "policy_ref": []
+    },
+    {
+      "id": "adoption-decision",
+      "owns": "digest 起点で導入すべき/様子見/不要を分類し提案（外部配布物は信頼性 4 段階のセキュリティ監査を通過時のみ昇格）",
+      "kind": "skill",
+      "component": "skills/claude-stack-audit",
+      "role": "decide",
+      "boundary": "情報収集=claude-stack-news(input) / 公式ベスプラ起点の構成点検=claude-config-audit。",
+      "policy_ref": []
+    },
+    {
+      "id": "rule-augmentation",
+      "owns": "繰り返し指摘・確定運用を sensor に CLAUDE.md/rules/memory への追記 diff を起案（足す係）",
+      "kind": "skill",
+      "component": "skills/lesson-harvest",
+      "role": "augment",
+      "boundary": "剪定(削る係)=claude-config-audit / skill 構造=claude-skill-audit。",
+      "policy_ref": ["rules/config-hygiene.md"]
+    },
+    {
+      "id": "clone-moment-supply-chain-defense",
+      "owns": "外部 repo の clone/fork/未知 OSS 試用の瞬間に gitleaks→trivy→IOC→manual review→isolated exec を強制",
+      "kind": "skill",
+      "component": "skills/oss-clone-security",
+      "role": "security",
+      "boundary": "継続診断=vuln-scan / 単一 repo 総合監査=cso(非同梱)。取り込み瞬間に特化。",
+      "policy_ref": []
+    },
+    {
+      "id": "continuous-cve-eol-triage",
+      "owns": "全リポの依存 CVE + ランタイム/ベースイメージ CVE + EOL ランタイムを定期検出し 対応要/監視/無視 にトリアージ（npm audit/Dependabot が見れないランタイム本体を埋める）",
+      "kind": "skill",
+      "component": "skills/vuln-scan",
+      "role": "security",
+      "boundary": "clone 瞬間=oss-clone-security / 単一 repo 総合=cso(非同梱)。継続・全リポ・ランタイム+EOL に特化。",
+      "policy_ref": []
+    },
+    {
+      "id": "machine-optimize",
+      "owns": "macOS の SSD 空き + RAM をアクティブ PJ/セッション除外で安全に最適化（提案→承認後実行）",
+      "kind": "skill",
+      "component": "skills/dev-machine-optimize",
+      "role": "ops",
+      "boundary": "",
+      "policy_ref": []
+    },
+    {
+      "id": "generic-pr-flow",
+      "owns": "保護ブランチ着手時に worktree を切って 実装→検証→マルチモデルレビュー→PR→cleanup する汎用骨格フロー",
+      "kind": "skill",
+      "component": "skills/worktree-pr-flow",
+      "role": "lifecycle",
+      "boundary": "repo 固有フローは各 *-pr-flow(非同梱)が優先。本 skill は fallback / 新 repo テンプレ。強制レイヤーは worktree-trigger.py hook。",
+      "policy_ref": ["rules/agent-model-routing.md"]
+    },
+    {
+      "id": "kit-recipient-adopt-audit",
+      "owns": "kit 利用者が既存 harness を壊さず『良いところだけ pick して強化』するための audit→承認分だけ反映（safe モードの差分レビュー経路）",
+      "kind": "skill",
+      "component": "skills/masa-harness-audit",
+      "role": "kit-meta",
+      "boundary": "kit 配布物固有（個人 harness の自己監査 = claude-config-audit/claude-skill-audit とは別文脈）。",
+      "policy_ref": ["rules/config-hygiene.md"]
+    }
+  ],
+  "policy_sources": [
+    { "ref": "rules/config-hygiene.md", "owns": "config 各層(settings/skills/memory/rules)の owner マップ SoT・剪定/追加の係分け・sprawl 閾値" },
+    { "ref": "rules/skill-template.md", "owns": "skill 構造・命名規約・anti-pattern の SoT" },
+    { "ref": "rules/agent-model-routing.md", "owns": "Agent/外部レビューの model/effort 選定軸の SoT" },
+    { "ref": "rules/typescript.md", "owns": "TypeScript コーディング規約" }
+  ]
+}

@@ -46,6 +46,7 @@ masa-harness-kit/
 ├── setup.sh                       # 配置スクリプト（fresh / safe / overwrite の3モード）
 ├── CLAUDE.md.template             # グローバル運用ルールの骨格（{{...}} を記入）
 ├── settings.json.template         # permissions / hooks 配線（$HOME 相対）
+├── capability-manifest.json       # どの skill/hook が何の capability を owner するか（機械可読 owner マップ・discovery/MECE 検証用）
 ├── hooks/
 │   ├── governance-gate.py         # PreToolUse ガバナンス gate（BLOCK/LOG/ALLOW）
 │   ├── audit-reminder.sh          # SessionStart: 定期タスクの due 通知（BSD/GNU date 両対応）

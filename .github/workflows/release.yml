@@ -36,6 +36,11 @@ jobs:
           bash -n install.sh
           bash -n masa-harness-kit/setup.sh
           bash -n .maint/kit-sync.sh
+          bash -n .maint/capability-check.sh
+
+      # capability-manifest.json と kit 構成の整合を release 経路でも実行（version 不一致・stale manifest を pack 前に止める）
+      - name: Capability manifest check
+        run: bash .maint/capability-check.sh
 
       # 配布 tarball を作成（backup/キャッシュは除外）
       - name: Build tarball

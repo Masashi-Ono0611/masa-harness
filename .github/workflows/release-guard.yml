@@ -1,8 +1,10 @@
 name: release-guard
 
-# リリース漏れ・README stale を構造的に防ぐガード。
+# リリース漏れ・README stale・capability drift を構造的に防ぐガード。
 #   - doc-check    : PR / push で README と実配布物（skills/commands/hooks/rules）の整合を検証。
 #                    PR の required status check にすれば、stale な README の merge をブロックできる。
+#   - capability-check: PR / push で capability-manifest.json と kit 構成の整合を検証
+#                    （orphan / dangling / id 重複 / policy_ref 実在）。capability-layer drift を防ぐ。
 #   - release-status: push (main) で「最新タグ以降に配布物が変わったのに VERSION 据え置き」=
 #                    マージ済みだが未リリースの漏れを検出して fail（main に赤 X が残る＝忘れない）。
 on:
@@ -22,6 +24,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: README ↔ 配布物 整合（stale tree 防止）
         run: bash .maint/kit-sync.sh doc-check --strict
+
+  capability-check:
+    name: capability-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: capability-manifest ↔ kit 構成 整合（capability drift 防止）
+        run: bash .maint/capability-check.sh
 
   release-status:
     name: release-status
