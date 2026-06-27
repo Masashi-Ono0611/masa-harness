@@ -36,6 +36,7 @@ jobs:
           bash -n install.sh
           bash -n masa-harness-kit/setup.sh
           bash -n .maint/kit-sync.sh
+          bash -n .maint/capability-check.sh
 
       # 配布 tarball を作成（backup/キャッシュは除外）
       - name: Build tarball

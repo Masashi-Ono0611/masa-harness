@@ -13,7 +13,8 @@
 ## ファイル
 
 - `kit-manifest.tsv` — 同期台帳。`kit相対パス〔TAB〕本体ソース(~/...)〔TAB〕sync_type〔TAB〕baseline_sha256`。`baseline_sha256` = 「kit がこの本体状態まで追従済み」の基準点。
-- `kit-sync.sh` — 下記サブコマンド。
+- `kit-sync.sh` — 下記サブコマンド。**ファイル同期 drift（hash）**を見る。
+- `capability-check.sh` — `masa-harness-kit/capability-manifest.json`（機械可読 owner マップ）と kit 構成の整合を検証する別レイヤーのゲート。**capability-layer drift** を見る＝orphan（ship 済だが capability 未宣言）/ dangling（実在しない component を指す）/ id 重複 / policy_ref の実在。read-only・exit 1 で fail。`release-guard.yml`（PR/push）が呼ぶ。
 
 ## サブコマンド
 

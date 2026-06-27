@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-06-27
+
+kit が提供する capability（どの skill/hook が何を owner するか）を機械可読で publish する `capability-manifest.json` を同梱したリリース。`config-hygiene.md` の owner マップ（散文）の machine-readable projection で、discovery（「何が X を担うか」）・MECE 検証（重複/カバー漏れ）・capability-layer の drift 検出に使える。kit-sync の「ファイル同期 drift（hash）」とは別レイヤーの「capability-layer drift」を見る。
+
+### 追加
+- **`masa-harness-kit/capability-manifest.json`** … kit が ship する 11 skill + 5 hook の各々が owner する capability を `id / owns / role / component / boundary(MECE) / policy_ref` で宣言する機械可読 manifest。recipient は何をインストールしたかを capability 単位で discovery でき、MECE の重複/漏れも自己点検できる。SoT は各 rule（policy_ref）と `config-hygiene.md`。
+- **`.maint/capability-check.sh`** … manifest と kit 構成の整合ゲート（メンテ専用・配布物外）。orphan（ship 済だが capability 未宣言）/ dangling（実在しない component を指す）/ id 重複 / policy_ref の実在を検証。`release-guard.yml` の PR/push ジョブに追加し、capability-layer の drift を構造的に防ぐ。
+
 ## [1.6.0] - 2026-06-26
 
 保護ブランチ上の作業を worktree に物理分離する「worktree-first」を L1 強制 hook ＋ 汎用フロー skill のペアで同梱し、あわせて継続セキュリティ診断 skill と汎用ワークフロー command 群を kit に加えたリリース。skill は「呼ばれないと発火しない」ため、デフォルト化の強制は hook、フローの中身は skill が担う分担。
