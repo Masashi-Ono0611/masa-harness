@@ -19,6 +19,18 @@ jq -e . "$MANIFEST" >/dev/null 2>&1 || { echo "❌ manifest が不正な JSON"; 
 
 fail=0
 
+# (0) version 不変条件: manifest.version は masa-harness-kit/VERSION と一致せねばならない
+#     （bump 漏れで manifest が stale な release metadata を advertise するのを防ぐ）
+echo "=== version 整合（manifest.version == VERSION）==="
+kit_ver="$(tr -d '[:space:]' < "$KIT_DIR/VERSION" 2>/dev/null)"
+man_ver="$(jq -r '.version' "$MANIFEST")"
+if [ "$kit_ver" = "$man_ver" ]; then
+  echo "  ✅ 一致 (${man_ver})"
+else
+  echo "  ❌ 不一致: manifest=$man_ver / VERSION=$kit_ver"
+  fail=1
+fi
+
 # (1) ship 対象 component を列挙（skills=ディレクトリ / hooks=ファイル）
 shipped=()
 for d in "$KIT_DIR"/skills/*/; do [ -d "$d" ] && shipped+=("skills/$(basename "$d")"); done
@@ -35,27 +47,48 @@ for c in "${shipped[@]}"; do
 done
 [ "$orphan" = 0 ] && echo "  ✅ なし（全 ship component に capability 宣言あり）"
 
-# (3) dangling: capability が指す component が実在しない
-echo "=== dangling（capability が実在しない component を指す）==="
+# (3) dangling: capability の component は「実在する ship 済 skills/<name> or hooks/<name>」でなければならない。
+#     単なる path 存在チェックだと ../ 脱出や非 ship ファイルを通す（fails-open）ので shape を固定する。
+echo "=== dangling（capability が ship 済 skills/* | hooks/* を指すか）==="
 dangling=0
 while IFS= read -r c; do
-  [ -e "$KIT_DIR/$c" ] || { echo "  ❌ $c"; dangling=1; fail=1; }
+  [ -z "$c" ] && continue
+  case "$c" in
+    skills/*/*|hooks/*/*|*/../*|../*) echo "  ❌ 不正な component 形（skills/<name> | hooks/<name> のみ可）: $c"; dangling=1; fail=1; continue ;;
+    skills/*) [ -d "$KIT_DIR/$c" ] || { echo "  ❌ 実在しない skill: $c"; dangling=1; fail=1; } ;;
+    hooks/*)  [ -f "$KIT_DIR/$c" ] || { echo "  ❌ 実在しない hook: $c"; dangling=1; fail=1; } ;;
+    *) echo "  ❌ skills/ でも hooks/ でもない component: $c"; dangling=1; fail=1 ;;
+  esac
 done <<< "$declared"
-[ "$dangling" = 0 ] && echo "  ✅ なし（全 capability が実在 component を指す）"
+[ "$dangling" = 0 ] && echo "  ✅ なし（全 capability が ship 済 skills/* | hooks/* を指す）"
 
 # (4) id 一意性
 echo "=== capability id 一意性 ==="
 dup=$(jq -r '.capabilities[].id' "$MANIFEST" | sort | uniq -d)
 [ -n "$dup" ] && { echo "  ❌ 重複 id: $dup"; fail=1; } || echo "  ✅ 一意"
 
-# (5) policy_ref が実在 rule を指すか
-echo "=== policy_ref の実在 ==="
+# (5) policy_ref は「実在する rules/<name>」でなければならない（任意パス/../ を通さない）
+echo "=== policy_ref（実在する rules/* か）==="
 prfail=0
 while IFS= read -r r; do
   [ -z "$r" ] && continue
-  [ -e "$KIT_DIR/$r" ] || { echo "  ❌ 実在しない policy_ref: $r"; prfail=1; fail=1; }
+  case "$r" in
+    rules/*/*|*/../*|../*) echo "  ❌ 不正な policy_ref 形（rules/<name> のみ可）: $r"; prfail=1; fail=1; continue ;;
+    rules/*) [ -f "$KIT_DIR/$r" ] || { echo "  ❌ 実在しない policy_ref: $r"; prfail=1; fail=1; } ;;
+    *) echo "  ❌ rules/ 配下でない policy_ref: $r"; prfail=1; fail=1 ;;
+  esac
 done < <(jq -r '[.capabilities[].policy_ref[]?, .policy_sources[].ref] | unique[]' "$MANIFEST")
-[ "$prfail" = 0 ] && echo "  ✅ 全 policy_ref が実在"
+[ "$prfail" = 0 ] && echo "  ✅ 全 policy_ref が rules/* 実在"
+
+# (6) role は roles vocab 内でなければならない（宣言外の role を防ぐ）
+echo "=== role が宣言 vocab 内か ==="
+rolefail=0
+vocab="$(jq -r '.roles | keys[]' "$MANIFEST")"
+while IFS= read -r role; do
+  [ -z "$role" ] && continue
+  printf '%s\n' "$vocab" | grep -qxF "$role" || { echo "  ❌ vocab 外の role: $role"; rolefail=1; fail=1; }
+done < <(jq -r '.capabilities[].role' "$MANIFEST")
+[ "$rolefail" = 0 ] && echo "  ✅ 全 role が roles vocab 内"
 
 echo ""
 if [ "$fail" = 0 ]; then

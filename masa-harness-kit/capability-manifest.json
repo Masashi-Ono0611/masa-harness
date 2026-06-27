@@ -1,6 +1,6 @@
 {
   "schema": "masa-harness/capability-manifest@1",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "machine-readable owner map — どの component が何の capability を owner するか。config-hygiene.md の owner マップ（散文）の機械可読 projection。discovery（『何が X を担うか』）/ MECE 検証（重複・カバー漏れ）/ kit-sync の capability-layer drift 検出に使う。SoT は各 rule（policy_ref）と config-hygiene.md。",
   "philosophy": "Thin Harness, Fat Skills — 知能=skill / 実行=hook / 記憶=memory / 規約=rule。harness は薄く、能力は component に宿す。",
   "roles": {
